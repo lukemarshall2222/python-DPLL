@@ -8,77 +8,56 @@ ANDs are implicit in the dpll array between each of the clauses, ORs are implici
 class DPLL(object):
 
     def __init__(self) -> None:
-        self.clauses = []
+        self.proposition = []
 
     def ADD(self, clause):
-        if isinstance(clause, set): # negating a clause produces separte negated literals that must be added individually
+        if isinstance(clause, set): # negating a clause produces separted negated literals that must be added individually
             while len(clause != 0):
                 self.clauses.append(clause.pop())
         else: 
-            self.clauses.append(clause)
+            self.proposition.append(clause)
+
+    def sat(self):
+        """Returns if the proposition is solvable or not"""
+        pass
 
 class Clause(object):
 
-    def __init__(self) -> None:
-        self = []
-
-    def NOT(self, clause):
-        if isinstance(clause, Literal):
-            return clause.set_sign_neg()
-        elif isinstance(clause, Clause):
-            negated = set()
-            for literal in clause:
-                literal.set_sign_neg()
-                negated.add(literal)
-            return negated
-
-    def AND(self, *args):
+    def __init__(self, *args) -> None:
+        self.clause = [] 
         for arg in args:
-            if isinstance(arg, Literal):
+            self.clause.append(arg)
+
+
+    def NOT(self):
+        """Move negations inside e.g. :
+            a) ~(~a) = a
+            c) ~(a v b) = ~a ∧ ~b"""
+        negated = set()
+        for instance in self.clause:
+            negated.add(instance.NOT())
+        return negated
 
         
-    
-    def OR(self, *args):
-        clause = []
-        for arg in args:
-            clause.append(arg)
-        return clause
-
-        
-
-
 class Literal(object):
 
     def __init__(self, literal) -> None:
-        self.variable = literal
+        self.variable = str(literal)
         self.sign = "+"
 
     def __str__(self) -> str:
         return self.sign + f"{self.variable}"
     
-    def set_sign_neg(self):
-        self.sign = '-'
+    def NOT(self):
+        # ~(~a) == a
+        # ~(a) == ~a
+        self.sign = '-' if self.sign == '+' else ''
     
     def get_sign(self):
-        return 'positive' if self.sign == '+' else 'negative'
+        print('This literal has a sign that is ' + 'positive' if self.sign == '+' else 'negative')
     
     def is_neg(self):
         return self.sign == '-'
     
     def is_pos(self):
         return self.sign == '+'
-    
-    def clauses(*args):
-        """Returns a list of clauses with the same names as those given to the function"""
-        clauses = []
-        for arg in args:
-            arg = Clause()
-            clauses.append(arg)
-        return clauses
-
-    def literals(*args):
-        literals = []
-        for arg in args:
-            arg = Literal()
-            literals.append(arg)
-        return literals
