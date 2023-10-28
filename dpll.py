@@ -29,37 +29,59 @@ class DPLL(object):
         """Returns if the proposition is solvable or not"""
         # check if all the clauses in the proposition are true, if they are, the proposition is satis
         sat = True
+        unsat = True
         for clause in self.proposition:
             if isinstance(clause, Literal):
                 sat = False if clause.get_calculated_val() == False else sat
+                unsat = False if clause.get_calculated_val() == True else unsat
             elif isinstance(clause, Clause):
                 sat = False if clause.get_status() == False else sat
+                unsat = False if clause.get_status() == True else unsat
         if sat:
-            return True
+            return "sat"
+        elif unsat:
+            return "unsat"
         
-        # set the unit clauses to true
-        self.unit_clause_heuristic()
+        # apply unit clause heristic
+        res = self.unit_clause_heuristic()
+        if res == "unsat":
+            return res
+        elif res == "changed":
+            return sat()
+        
+        res2 = self.pure_clause_hueristic()
+        if res2 == "cahnged":
+            return sat()
+        
 
-        # check to make sure all the unit clauses with the same variable have the same underlying boolean value
-        uclauses = {}
+    def guess(self):
+        clause_var = ''
+        for i in range(len(self.proposition)):
+            for clause in self.proposition:
+                if len(clause) <= i:
+                    clause.set 
+
+
+    def pure_clause_hueristic(self):
+        # check if a variable shows up only in its positive or negative form in the proposition
+        literals_dict = {}
         for clause in self.proposition:
             if isinstance(clause, Literal):
-                var = clause.get_variable()
-                if var in uclauses:
-                    if clause.get_status() != uclauses[var]:
-                        return 'unsat'
-                    else:
-                        continue
+                if clause.get_variable() in literals_dict:
+                    if literals_dict[clause][0] == True:
+                        if literals_dict[clause][1] != clause.get_sign():
+                            literals_dict[clause][0] = False
                 else:
-                    uclauses[var] = clause.get_status()
-                    continue
+                    literals_dict[clause] = (True, clause.get_sign())
+            else:
+                for literal in clause:
+                    if literal.get_variable() in literals_dict:
+                        if literals_dict[literal][0] == True:
+                            if literals_dict[literal][1] != clause.get_sign():
+                                literals_dict[literal][0] = False
+                else:
+                    literals_dict[literal] = (True, clause.get_sign())
 
-
-
-        
-    def unsat(self):
-        # TODO check if any of the calculated values of a literal contradict
-        pass
 
     def unit_clause_heuristic(self)
         # check the unit if any of the unit clauses are the only time that the literal shows up in the proposition
@@ -81,6 +103,33 @@ class DPLL(object):
                 else:
                     lit.set_status(False)
                 assert lit.get_calculated_val() == True
+            
+        # check to make sure all the unit clauses with the same variable have the same underlying boolean value
+        uclauses = {}
+        for clause in self.proposition:
+            if isinstance(clause, Literal):
+                var = clause.get_variable()
+                if var in uclauses:
+                    if clause.get_status() != uclauses[var]:
+                        return 'unsat'
+                else:
+                    uclauses[var] = clause.get_status()
+                    continue
+
+        # if a literal contained within a clause is the positive form of a unit clause, 
+        # this makes the clause true and it may be removed from the proposition
+        changed = False
+        for clause in self.proposition:
+            if isinstance(clause, Literal):
+                self.proposition.remove(clause)
+                changed = True
+            elif isinstance(clause, Clause):
+                for literal in clause:
+                    if literal.get_variable() in unit_clauses and literal.is_pos():
+                        self.proposition.remove(clause)
+                        break
+            
+        return "changed" if changed else "unchanged"
 
 class Clause(object):
 
@@ -134,6 +183,9 @@ class Clause(object):
     
     def is_empty(self):
         return len(self.clause) == 0
+    
+    def __len__(self):
+        return len(self.clause)
 
         
 class Literal(object):
@@ -187,5 +239,5 @@ class Literal(object):
         else: 
             self.__calculated_val = None
 
-    def __eq__(self, literal1: 'Literal', literal2: 'Literal') -> bool:
-        return literal1.variable == literal2.variable
+    def __eq__(self, other: 'Literal',) -> bool:
+        return self.variable == other.variable
