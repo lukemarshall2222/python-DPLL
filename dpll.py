@@ -132,33 +132,56 @@ class DPLL(object):
         
         # apply unit clause heristic
         res = self.unit_clause_heuristic()
-        if res:
-            return sat()
+        if res == 'unsat':
+            return res
+        elif res == 'changed':
+            return self.sat()
         
         res2 = self.pure_clause_hueristic()
         if res2:
             return sat() 
         
         prop_cp = self.proposition.copy()
+        vars_cp = self.variables.copy()
         least = len(self.proposition[0])
         guess = self.proposition[0][0].get_variable()
         for clause in self.proposition:
             if len(clause) < least:
                 least = len(clause)
                 guess = clause[0].get_variable()
+        self.variables[guess] = True
         for clause in self.proposition:
+            assert isinstance(clause, Clause)
             for lit in clause:
+                assert isinstance(lit, Literal)
                 if lit.get_variable() == guess:
                     lit.set_status()
+                    if lit.get_sign() == 'pos':
+                        self.proposition.remove(clause)
+                        break
+                    else:
+                        clause.remove(lit)
+                        continue
         res3 = sat()
         if res3 == 'sat':
             return res3
         else:
             self.proposition = prop_cp
+            self.variables = vars_cp
+        self.variables[guess] = False
         for clause in self.proposition:
+            assert isinstance(clause, Clause)
             for lit in clause:
+                assert isinstance(lit, Literal)
                 if lit.get_variable() == guess:
                     lit.set_status(False)
+                    if lit.get_sign() == 'neg':
+                        self.proposition.remove(clause)
+                        break
+                    else:
+                        clause.remove(lit)
+                        continue
+
         return sat()
 
 
@@ -278,6 +301,11 @@ class Clause(object):
             negated.add(instance.NOT())
         self.set_status()
         return negated
+    
+    #def bicond(self, clause):
+
+    
+    #def implies(self, clause):
     
     def is_empty(self):
         return len(self.__clause) == 0
