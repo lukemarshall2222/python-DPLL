@@ -8,28 +8,27 @@ ANDs are implicit in the dpll array between each of the clauses, ORs are implici
 
 class Literal(object):
 
-    def __init__(self, literal) -> None:
-        self.__variable = str(literal)
-        self.sign = "+"
+    def __init__(self, variable) -> None:
+        self.__variable = str(variable)
+        self.__sign = "+"
         self.__status = None
         self.__calculated_val = None
 
     def __str__(self) -> str:
-        return self.sign + f"{self.get_variable()}"
+        return self.__sign + f"{self.get_variable()}"
     
     def NOT(self):
         # ~(~a) == a
         # ~(a) == ~a
-        self.sign = '-' if self.sign == '+' else ''
-
+        self.__sign = '-' if self.__sign == '+' else '+'
+        if self.__status is not None:
+            self.set_calculated_val()
+    
     def get_variable(self):
         return self.__variable
     
     def get_sign(self):
-        return 'pos' if self.sign == '+' else 'neg'
-    
-    def is_pos(self):
-        return self.__calculated_val
+        return 'pos' if self.__sign == '+' else 'neg'
     
     def set_status(self, val=True):
         try:
@@ -39,6 +38,7 @@ class Literal(object):
             print('set_status only takes a boolean value as an argument.')
             raise TypeError
         self.__status = val
+        self.set_calculated_val()
 
     def get_status(self):
         return self.__status
@@ -47,12 +47,12 @@ class Literal(object):
         return self.__calculated_val
     
     def set_calculated_val(self):
-        if self.__status == True:
-            self.__calculated_val = self.sign == '+'
+        if self.__status is None:
+            pass
+        elif self.__status == True:
+            self.__calculated_val = self.__sign == '+'
         elif self.__status == False:
-            self.__calculated_val = self.sign == '-'
-        else: 
-            self.__calculated_val = None
+            self.__calculated_val = self.__sign == '-'
 
     def __eq__(self, other: 'Literal',) -> bool:
         return self.get_variable() == other.get_variable()
@@ -137,10 +137,12 @@ class DPLL(object):
         elif res == 'changed':
             return self.sat()
         
+        # apply pure clause hueristic
         res2 = self.pure_clause_hueristic()
         if res2:
             return sat() 
         
+        # apply guess and check
         prop_cp = self.proposition.copy()
         vars_cp = self.variables.copy()
         least = len(self.proposition[0])
@@ -256,6 +258,8 @@ class Clause(object):
             elif isinstance(arg, Clause):
                 for lit in arg:
                     self.__clause.append(lit)
+            elif isinstance(arg, set):
+                self.ADD(arg)
             else:
                 print("Clause object only accepts Literal or Clause objects as input.")
                 raise TypeError
@@ -302,11 +306,6 @@ class Clause(object):
         self.set_status()
         return negated
     
-    #def bicond(self, clause):
-
-    
-    #def implies(self, clause):
-    
     def is_empty(self):
         return len(self.__clause) == 0
     
@@ -318,6 +317,36 @@ class Clause(object):
     
     def __getitem__(self, index):
         return self.__clause[index]
+    
+    # TODO fix implication function
+def implies(clause1: Clause, clause2: Clause, proposition=None) -> Clause:
+    res_clause = Clause()
+    if isinstance(clause1, Clause):
+        for lit in clause1:
+            res_clause.ADD(lit)
+    elif isinstance(clause1, Literal):
+        res_clause.ADD(clause1)
+    else:
+        print("Implication can only be between Literals and Objects")
+        raise TypeError
+    res_clause.NOT()
+    if isinstance(clause2, Clause):
+        for lit in clause2:
+            res_clause.ADD(lit)
+    elif isinstance(clause2, Literal):
+        res_clause.ADD(clause2)
+    else:
+        print("Implication can only be between Literals and Objects")
+        raise TypeError
+    return res_clause
 
-        
-
+# TODO implement a biconditional function
+# def bicond(clause1: Clause, clause2: Clause, proposition=None) -> tuple(Clause):
+#     ''''''
+#     res_clause1 = implies(clause1, clause2)
+#     res_clause2 = implies(clause1, clause2)
+#     if proposition is not None:
+#         assert isinstance(proposition, DPLL)
+#         proposition.ADD(res_clause1)
+#         proposition.ADD(res_clause2)
+#     return (res_clause1, res_clause2)
