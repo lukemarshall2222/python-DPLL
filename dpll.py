@@ -112,10 +112,15 @@ class DPLL(object):
     
     def __getitem__(self, index):
         return self.proposition[index]
+    
+    def is_empty(self):
+        return len(self.proposition) == 0
 
     def sat(self):
         """Returns if the proposition is solvable or not"""
-        # check if all the clauses in the proposition are true, if they are, the proposition is satis
+        # check if all the clauses in the proposition are true, if they are, the proposition is satisfied
+        if self.is_empty():
+            return "unsat"
         sat = True
         unsat = True
         for clause in self.proposition:
@@ -257,6 +262,9 @@ class Clause(object):
                 self.__clause.append(arg)
             elif isinstance(arg, Clause):
                 for lit in arg:
+                    for i in self.__clause:
+                        if i == lit and i.get_sign() != lit.get_sign():
+                            print("Contradiction: The Clause contains a literal with the same variable and opposite sign.")
                     self.__clause.append(lit)
             elif isinstance(arg, set):
                 self.ADD(arg)
@@ -265,11 +273,20 @@ class Clause(object):
                 raise TypeError
 
     def set_status(self):
-        val = False
+        none_in = False
+        true_in = False
         for literal in self.__clause:
-            if literal.get_calculated_val():
-                val = True
-        self.__status = val
+            assert isinstance(literal, Literal)
+            if literal.get_calculated_val() is None:
+                none_in = True
+            elif literal.get_calculated_val():
+                true_in = True
+        if true_in:
+            self.__status = True
+        elif none_in and not true_in:
+            self.__status = None
+        elif not none_in and not true_in:
+            self.__status = False
 
     def get_status(self):
         self.set_status()
@@ -277,15 +294,28 @@ class Clause(object):
     
     def ADD(self, item):
         if isinstance(item, Literal):
+            for lit in self.__clause:
+                if lit == item:
+                    if lit.get_sign() == item.get_sign():
+                        print("The Clause contains a Literal with this variable of opposite sign: Contradiction")
+                        raise AttributeError
+                    else:
+                        continue
             self.__clause.append(item)
         elif isinstance(item, Clause):
             if item.is_empty():
                 print("An empty Clause object cannot be added to a Clause object")
                 raise AttributeError
-            for lit in item:
-                self.__clause.append(lit)
+            for i in item:
+                for lit in self.__clause:
+                    if lit == i and lit.get_sign() != i.get_sign:
+                        print("Contradiction: The Clause contains a Literal with this variable of opposite sign.")
+                        raise AttributeError
+                    else:
+                        break
+                self.__clause.append(i)
         else:
-            print("Clause object only accepts Literal or Clause objects as input.")
+            print("Clause object only accepts Literal or non-negated Clause objects as input.")
             raise TypeError
         self.set_status()
 
