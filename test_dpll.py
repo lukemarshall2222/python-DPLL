@@ -52,10 +52,18 @@ def test_clause_init():
     b = Literal('b')
     c = Literal('c')
     cl = Clause(a, b, c)
-    arr = ['a', 'b', 'c']
+    arr = [a, b, c]
     for i in range(len(cl)): # also checks __len__ and __getitem__ methods
-        assert arr[i] == cl[i].get_variable()
+        print(arr[i])
+        print(cl[i])
+        assert arr[i] == cl[i]
     assert cl.get_status() == None # also partially tests get_status and set_status (used in get_status)
+    a2 = Literal('a')
+    a2.NOT()
+    print(a.get_sign())
+    print(a2.get_sign())
+    '''with pytest.raises(AttributeError):
+        cl2 = Clause(a, b, c, a2)'''
 
 def test_clause_status():
     a = Literal('a')
@@ -97,6 +105,7 @@ def test_clause_add():
     arr.append(c)
     arr.append(d)
     cl1.ADD(cl2)
+    print(cl1)
     for i in range(len(cl1)):
         assert cl1[i] == arr[i]
     assert cl1.get_status() == None
@@ -113,10 +122,12 @@ def test_clause_add():
         cl1.ADD(cl3)
     a2 = Literal('a')
     a2.NOT()
-    print(a2.get_sign())
-    print(a.get_sign())
+    #print(a2.get_sign())
+    #print(a.get_sign())
+    print(cl1)
     with pytest.raises(AttributeError):
         cl1.ADD(a2)
+    print(cl1)
     with pytest.raises(AttributeError):
         cl1.ADD(Clause(a2))
     cl3 = Clause(Literal('f'), Literal('g')).NOT()
