@@ -3,61 +3,11 @@
 Luke Marshall
 DPLL solver
 
-ANDs are implicit in the dpll array between each of the clauses, ORs are implicit in the clause arrays
+ANDs are implicit in the dpll list between each of the clauses. 
+ORs are implicit in between Literals in the clause list.
 """
-
-from typing import Union
-
-class Literal(object):
-
-    def __init__(self, variable) -> None:
-        self.__variable = str(variable)
-        self.__sign = "+"
-        self.__status = None
-        self.__calculated_val = None
-
-    def __str__(self) -> str:
-        return self.__sign + f"{self.__variable}"
-    
-    def NOT(self):
-        # ~(~a) == a
-        # ~(a) == ~a
-        self.__sign = '-' if self.__sign == '+' else '+'
-        if self.__status is not None:
-            self.set_calculated_val()
-    
-    def get_variable(self):
-        return self.__variable
-    
-    def get_sign(self):
-        return 'pos' if self.__sign == '+' else 'neg'
-    
-    def set_status(self, val=True):
-        try:
-            if not isinstance(val, bool):
-                raise TypeError
-        except TypeError:
-            print('set_status only takes a boolean value as an argument.')
-            raise TypeError
-        self.__status = val
-        self.set_calculated_val()
-
-    def get_status(self):
-        return self.__status
-    
-    def get_calculated_val(self):
-        return self.__calculated_val
-    
-    def set_calculated_val(self):
-        if self.__status is None:
-            pass
-        elif self.__status == True:
-            self.__calculated_val = self.__sign == '+'
-        elif self.__status == False:
-            self.__calculated_val = self.__sign == '-'
-
-    def __eq__(self, other: 'Literal',) -> bool:
-        return self.get_variable() == other.get_variable()
+from Literal import Literal
+from Clause import Clause
 
 
 class DPLL(object):
@@ -79,12 +29,14 @@ class DPLL(object):
 
 
     def ADD(self, clause):
-        if isinstance(clause, set): # negating a clause produces separted negated literals that must be added individually
+        if isinstance(clause, set): 
+            # negating a clause produces separted negated literals that must be 
+            # added individually
             while len(clause != 0):
                 x = clause.pop()
-                if not isinstance(x, Clause) and not isinstance(x, Literal):
-                    print("DPLL proposition can only be made up of Literal and Clause objects.")
-                    raise TypeError
+                if not isinstance(x, (Clause, Literal)):
+                    raise TypeError("""DPLL proposition can only be made up of 
+                                    Literal and Clause objects.""")
                 x_var = x.get_variable()
                 if not x_var in self.__variables:
                     self.__variables[x_var] = None
@@ -99,8 +51,7 @@ class DPLL(object):
                     self.__variables[lit.get_variable()] = None
             self.__proposition.append(clause) # add the clause directly to the proposition
         else:
-            print("DPLL proposition can only be made up of Literal and Clause objects.")
-            raise TypeError
+            raise TypeError("DPLL proposition can only be made up of Literal and Clause objects.")
         
     def remove(self, clause):
         if clause in self.__proposition:
@@ -195,7 +146,10 @@ class DPLL(object):
 
 
     def pure_clause_hueristic(self) -> bool:
-        # check if a variable shows up only in its positive or negative form in the proposition
+        '''Sets tha value of any pure clauses so that their outward value is True. Removes all 
+         caluses containig those clauses
+         
+         Returns: bool representing if the proposition was changed at all in the process'''
         changed = False
         var_signs = {}
         var_uniformity = {}
@@ -221,7 +175,16 @@ class DPLL(object):
                     break
         return changed
 
+    """TODO: make it so if a clause is culled down to a single literal, change it to a unit clause"""
     def unit_clause_heuristic(self):
+        '''Sets the value of any unit clauses so their outward calculated value is True.
+        Checks the proposition for any sign contradictions on the unit clauses.
+        Removes the unit clauses. Removes literals from clauses if they have a negated sign
+        if they have the same variable as a unit clause; removes the clause from the proposition 
+        if the sign is positive.
+        
+        Returns: string representing if the proposition was changed in the process or if a contradiction
+        was found, allowing the proposition to be labeled unsatisfiable'''
         changed = False
         uclauses = {} # variable : bool (True if lit sign is 'pos' else False)
         for clause in self.__proposition:
@@ -269,151 +232,3 @@ class DPLL(object):
                             continue
         return "changed" if changed else "unchanged"
     
-
-class Clause(object):
-
-    def __init__(self, *args) -> None:
-        self.__clause = []
-        self.__status = None
-        for arg in args:
-            if isinstance(arg, Literal):
-                self.__clause.append(arg)
-            elif isinstance(arg, Clause):
-                for lit in arg:
-                    assert isinstance(lit, Literal)
-                    self.__clause.append(lit)
-            elif isinstance(arg, set):
-                self.ADD(arg)
-            else:
-                print("Clause object only accepts Literal or Clause objects as input.")
-                raise TypeError
-            # contradiction check:
-        #TODO fix contradiction check
-        len = len(self.__clause)
-        for i in range(len):
-            lit_sign = self.__clause[i].get_sign()
-            for j in range(len):
-                if self.__clause[i] == self.__clause[j] and i != j:
-                    if self.__clause[j].get_sign() != lit_sign:
-                        print(f"Contradition: The variable {lit.get_variable()} is contained within the clause more than once with opposite signs.")
-                        raise AttributeError
-                else:
-                    self.remove(self.__clause[j])
-                    len -= 1
-                    continue
-        self.set_status()
-
-    
-    def __str__(self) -> str:
-        return f"{[str(lit) for lit in self.__clause]}"
-    
-    def __iter__(self):
-        return iter(self.__clause)
-
-    def set_status(self):
-        none_in = False
-        true_in = False
-        for literal in self.__clause:
-            assert isinstance(literal, Literal)
-            if literal.get_calculated_val() is None:
-                none_in = True
-            elif literal.get_calculated_val():
-                true_in = True
-        if true_in:
-            self.__status = True
-        elif none_in and not true_in:
-            self.__status = None
-        elif not none_in and not true_in:
-            self.__status = False
-
-    def get_status(self):
-        self.set_status()
-        return self.__status
-    
-    def ADD(self, item):
-        if isinstance(item, Literal):
-            for lit in self.__clause:
-                if lit == item:
-                    if lit.get_sign() != item.get_sign():
-                        print("The Clause contains a Literal with this variable of opposite sign: Contradiction")
-                        raise AttributeError
-                    else:
-                        continue
-            self.__clause.append(item)
-        elif isinstance(item, Clause):
-            if item.is_empty():
-                print("An empty Clause object cannot be added to a Clause object")
-                raise AttributeError
-            for i in item:
-                for lit in self.__clause:
-                    if lit == i and lit.get_sign() != i.get_sign:
-                        print("Contradiction: The Clause contains a Literal with this variable of opposite sign.")
-                        raise AttributeError
-                    else:
-                        break
-                self.__clause.append(i)
-        else:
-            print("Clause object only accepts Literal or non-negated Clause objects as input.")
-            raise TypeError
-        self.set_status()
-
-    def remove(self, literal):
-       #for i in range(num):
-        self.__clause.remove(literal) 
-
-    def NOT(self):
-        """Move negations inside e.g. :
-            a) ~(~a) = a
-            c) ~(a v b) = ~a ∧ ~b"""
-        negated = set()
-        for instance in self.__clause:
-            negated.add(instance.NOT())
-        self.set_status()
-        return negated
-    
-    def is_empty(self):
-        return len(self.__clause) == 0
-    
-    def __len__(self):
-        return len(self.__clause)
-    
-    def __iter__(self):
-        return iter(self.__clause)
-    
-    def __getitem__(self, index):
-        return self.__clause[index]
-    
-    # TODO fix implication function
-def implies(clause1: Clause, clause2: Clause, proposition=None) -> Clause:
-    res_clause = Clause()
-    if isinstance(clause1, Clause):
-        for lit in clause1:
-            res_clause.ADD(lit)
-    elif isinstance(clause1, Literal):
-        res_clause.ADD(clause1)
-    else:
-        print("Implication can only be between Literals and Objects")
-        raise TypeError
-    res_clause.NOT()
-    if isinstance(clause2, Clause):
-        for lit in clause2:
-            res_clause.ADD(lit)
-    elif isinstance(clause2, Literal):
-        res_clause.ADD(clause2)
-    else:
-        print("Implication can only be between Literals and Objects")
-        raise TypeError
-    return res_clause
-
-# TODO implement a biconditional function
-# def bicond(clause1: Clause, clause2: Clause, proposition=None) -> tuple(Clause):
-#     ''''''
-#     res_clause1 = implies(clause1, clause2)
-#     res_clause2 = implies(clause1, clause2)
-#     if proposition is not None:
-#         assert isinstance(proposition, DPLL)
-#         proposition.ADD(res_clause1)
-#         proposition.ADD(res_clause2)
-#     return (res_clause1, res_clause2)
-
-def solve(*args: Literal)

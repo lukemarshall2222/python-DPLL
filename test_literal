@@ -1,0 +1,40 @@
+from Literal import Literal
+
+def test_instance():
+    # test the types of objects
+    literal = Literal('a')
+    assert isinstance(literal, Literal)
+
+def test_literal_init():
+    # testing the Literal constructor
+    a = Literal('a')
+    assert a.get_variable() == 'a'
+    assert a.get_sign() == 'pos'
+    assert a.get_status() is None
+    assert a.get_calculated_val() is None
+
+def test_literal_NOT():
+    a = Literal('a')
+    assert a.get_sign() == 'pos'
+    a.NOT()
+    assert a.get_sign() == 'neg'
+
+def test_literal_status_val():
+    a = Literal('a')
+    a.set_status()
+    assert a.get_sign() == 'pos'
+    assert a.get_status() == True
+    assert a.get_calculated_val() == True
+    a.NOT()
+    assert a.get_sign() == 'neg'
+    assert a.get_status() == True
+    assert a.get_calculated_val() == False
+    a.NOT()
+    a.set_status(False)
+    assert a.get_sign() == 'pos'
+    assert a.get_status() == False
+    assert a.get_calculated_val() == False
+    a.NOT()
+    assert a.get_sign() == 'neg'
+    assert a.get_status() == False
+    assert a.get_calculated_val() == True
