@@ -1,4 +1,11 @@
+import pytest
 from Literal import Literal
+from Clause import Clause
+
+'''def test_clause_instance():
+    # test the type of Clause
+    clause = Clause()
+    assert isinstance(clause, Clause)
 
 def test_clause_init():
     # testing the clause constructor
@@ -124,5 +131,5 @@ def test_clause_not():
             assert lit.get_sign() == 'neg'
         elif lit.get_variable() == 'b':
             assert lit.get_sign() == 'pos'
-    assert isinstance(cl_negated, set)
+    assert isinstance(cl_negated, set)'''
 

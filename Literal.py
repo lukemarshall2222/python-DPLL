@@ -92,9 +92,9 @@ class Literal(object):
         Returns: a copy of the Literal"""
         cp = Literal(self.__variable)
         if self.__sign == '-':
-            cp.NOT()
+            cp.flip_sign()
         if self.__status is not None:
-            cp._Literal__status == self.__status
+            cp.set_status(self.__status)
             cp.set_calculated_val()
         return cp
     
