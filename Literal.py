@@ -20,11 +20,14 @@ class Literal(object):
         self.__calculated_val = None # calculated based on sign and status
 
     def __str__(self) -> str:
-        """returns:
-                string representation of the sign and name of the literal"""
+        """Returns: string representation of the sign and name of the literal"""
         return self.__sign + self.__variable
     
-    def NOT(self):
+    def __repr__(self):
+        """Returns: string representation of the """
+        return self.__sign + self.__variable
+    
+    def NOT(self) -> 'Literal':
         """Negates the literal, flips the sign, changes the calculated value if the
         literal has a status.
         given a literal +a:  
@@ -81,11 +84,15 @@ class Literal(object):
     def __eq__(self, other: 'Literal',) -> bool:
         """Returns: a boolean representing if the variables of two literals are
         the same"""
-        return self.get_variable() == other.get_variable()
+        same = True
+        same = False if self.get_variable() != other.get_variable() else same
+        same = False if self.get_sign() != other.get_sign() else same
+        same = False if self.get_status() != other.get_status() else same
+        return same
 
     def __hash__(self) -> int:
         """Returns: hash value of the Literal based on the variable attribute"""
-        return hash(self.__variable)
+        return hash(self.__sign + self.__variable)
     
     def __copy__(self) -> 'Literal':
         """performs a shallow copy of the Literal and its attributes

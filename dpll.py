@@ -3,62 +3,97 @@
 Luke Marshall
 DPLL solver
 
-ANDs are implicit in the dpll list between each of the clauses. 
-ORs are implicit in between Literals in the clause list.
+The solver uses a proposition in conjunctive normal form to designate whether 
+or not it is satisfiable by assigning boolean values to each variable.
+ANDs are implicit in the proposition between each of the clauses. 
+ORs are implicit in between Literals in the Clauses.
+All literals with the same variable name have the same underlying boolean
+value, but may have different external values depending on their signs.
+If the external value of a unit clause is True it may be removed from the proposition
+because it can no longer cause it to be unsatisfiable. If the external value of a 
+Literal contained within a Clause is True, the status of the Clause is therefore True 
+and the Clause may be removed from the proposition because it can no longer cause the 
+proposition to be unsatisfiable. If the external value of a Literal contained within a 
+Clause is False, the Literal may be removed from the Clause because it can no longer 
+contribute to the Clause being True. A Clause containing a single Literal becomes a 
+unit clause.
+The proposition is solved by recursion using the unit clause heuristic, 
+the pure clause heuristic, and guess and check.
+The unit clause heuristic is used to set all unit clauses so their external 
+values are True, then they are removed from the proposition, and the clauses are 
+seached for any Literals with the same variable name. If the found Literal has the 
+same sign as the unit clause, the Clause containing it is removed; if it has the 
+opposite sign, it is removed from the Clause. 
+The pure clause heuristic is used to find Literals that have the same sign within 
+all the Clauses that hold them. Their value is set such that their external values are True,
+and the Clauses are removed from the proposition.
+If the proposition only contains clauses with the external value of True, or is an empty 
+proposition, it is deemed satisfiable; else it is deemed unsatisfiable.
+If the proposition contains two unit clauses with the same variable name but opposite signs, 
+it is unsatisfiable by contradiction.
+The variable names and their values are tracked as the solver progresses so that if it is 
+satisfiable they may be returned.
 """
 from Literal import Literal
 from Clause import Clause
 
+# Constants:
+UNSAT = 'unsat'
+SAT = 'sat'
+CHANGED = 'changed'
+UNCHANGED = 'unchanged'
+
 
 class DPLL(object):
+    """DPLL object contains a proposition in conjunctive normal form"""
 
     def __init__(self, *args) -> None:
         self.__variables = {}
-        self.__proposition = [arg for arg in args]
-        for clause in self.__proposition:
-            if not isinstance(clause, Literal) and not isinstance(clause, Clause):
-                print("The proposition only takes Literal and Clause objects.")
-                raise TypeError
-            elif isinstance(clause, Literal):
-                if not clause.get_variable() in self.__variables:
-                    self.__variables[clause.get_variable()] = None
+        self.__proposition = []
+        for item in args:
+            if isinstance(item, set):
+                while len(item):
+                    x = item.pop()
+                    if not isinstance(x, (Clause, Literal)):
+                        raise TypeError("""DPLL proposition can only be made up of 
+                                        Literal and Clause objects.""")
+                    self.__variables[x.get_variable()] = None
+                    self.__proposition.append(x)
+            elif isinstance(item, Literal):
+                    self.__proposition.append(item)
+                    self.__variables[item.get_variable()] = None
+            elif isinstance(item, Clause):
+                self.__proposition.append(item)
+                for lit in item:
+                    self.__variables[lit.get_variable()] = None
             else:
-                for lit in clause:
-                    if not lit.get_variable() in self.__variables:
-                        self.__variables[lit.get_variable()] = None
+                raise TypeError("A DPLL object only accepts Literal and Clause objects in the proposition.")
 
 
-    def ADD(self, clause):
-        if isinstance(clause, set): 
-            # negating a clause produces separted negated literals that must be 
+    def ADD(self, item):
+        if isinstance(item, set): 
+            # negating a clause produces separated negated literals that must be 
             # added individually
-            while len(clause != 0):
-                x = clause.pop()
+            while len(item):
+                x = item.pop()
                 if not isinstance(x, (Clause, Literal)):
                     raise TypeError("""DPLL proposition can only be made up of 
                                     Literal and Clause objects.""")
-                x_var = x.get_variable()
-                if not x_var in self.__variables:
-                    self.__variables[x_var] = None
+                self.__variables[x.get_variable()] = None
                 self.__proposition.append(x)
-        elif isinstance(clause, Literal):
-            if not clause.get_variable() in self.__variables:
-                self.__variables[clause.get_variable()] = None
-            self.__proposition.append(clause) # add the literal directly to the proposition
-        elif isinstance(clause, Clause):
-            for lit in clause:
-                if not lit.get_variable() in self.__variables:
-                    self.__variables[lit.get_variable()] = None
-            self.__proposition.append(clause) # add the clause directly to the proposition
+        elif isinstance(item, Literal):
+            self.__variables[item.get_variable()] = None
+            self.__proposition.append(item) # add the literal directly to the proposition
+        elif isinstance(item, Clause):
+            for lit in item:
+                self.__variables[lit.get_variable()] = None
+            self.__proposition.append(item) # add the clause directly to the proposition
         else:
             raise TypeError("DPLL proposition can only be made up of Literal and Clause objects.")
         
     def remove(self, clause):
         if clause in self.__proposition:
             self.__proposition.remove(clause)
-        else:
-            return False
-        return True
     
     def __iter__(self):
         return iter(self.__proposition)
@@ -67,15 +102,14 @@ class DPLL(object):
         return self.__proposition[index]
     
     def is_empty(self):
-        return len(self.__proposition) == 0
+        return not len(self.__proposition)
 
     def sat(self):
-        """Returns if the proposition is solvable or not"""
+        """Returns if the proposition is satisfiable or not"""
         # check if all the clauses in the proposition are true, if they are, the proposition is satisfied
         if self.is_empty():
             return "sat"
-        sat = True
-        unsat = True
+        sat = unsat = True
         for clause in self.__proposition:
             if isinstance(clause, Literal):
                 sat = False if not clause.get_calculated_val() else sat
