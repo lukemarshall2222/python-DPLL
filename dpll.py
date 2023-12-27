@@ -223,92 +223,105 @@ class DPLL(object):
 
         return sat()
 
+    def unit_clause_heuristic(self) -> str:
+            '''Sets the value of any unit clauses so their external calculated value is True.
+            Checks the proposition for any sign contradictions on the unit clauses.
+            Removes the unit clauses. Removes literals from clauses if they have a negated sign
+            but the same variable as a unit clause; removes the clause from the proposition 
+            if the sign is the same.
+            
+            Returns: string representing if the proposition was changed in the process or if a 
+            contradiction was found, allowing the proposition to be labeled unsatisfiable'''
+            uclauses = {} # Literal variable (str) : Literal sign (str)  
+            for item in self.__proposition:
+                # iterate through proposition, remove all empty clauses and tranform Clauses of
+                # length 1 to unit clauses (Literals) 
+                if isinstance(item, Clause):
+                    if item.is_empty():
+                        self.remove(item)
+                    elif len(item) == 1:
+                        new_unit = item[0]
+                        self.remove(item)
+                        self.ADD(new_unit)
+
+            for item in self.__proposition:
+                # finds all unit clauses and adds their attributes to uclauses if they are not 
+                # already in it and remove the Literal from the proposition, otherwise check that 
+                # the signs match between the two Literals; if they don't, return unsat by 
+                # contradiction
+                if isinstance(item, Literal):
+                    lit_var = item.get_variable()
+                    lit_sign = item.get_sign()
+                    if lit_var in uclauses:
+                        # if the Literal variable is in uclauses, checks the sign is the same as in
+                        # this Literal; if not, unsat by contradiction 
+                        if lit_sign != uclauses[lit_var]:
+                            return 'unsat' # by contradiction
+                    else:
+                        uclauses[lit_var] = lit_sign
+                        self.__variables[lit_var] = True if lit_sign == 'pos' else False
+                    self.__proposition.remove(item)
+
+            for i, clause in enumerate(self.__proposition):
+                # If the Literal variable is in uclauses, marks clause for removal from the 
+                # proposition if the signs match; removes the Literal from the Clause if the 
+                # signs don't match
+                removals = []
+                assert isinstance(clause, Clause), "Unit clause found in proposition after unit clause removal"
+                for lit in clause:
+                    assert isinstance(lit, Literal), "Non-Literal found within Clause"
+                    lit_var = lit.get_variable()
+                    if lit_var in uclauses:
+                        if lit.get_sign() == uclauses[lit_var]:
+                            removals.append(i)
+                            break
+                        else:
+                            self.__proposition[i] = clause.remove(lit)
+                for num in removals:
+                    # removes the clauses marked for removal earlier
+                    self.__proposition.remove(self.__proposition[num])
+
+            return DPLL.CHANGED if len(uclauses) else DPLL.UNCHANGED
 
     def pure_clause_hueristic(self) -> bool:
-        '''Sets tha value of any pure clauses so that their outward value is True. Removes all 
+        '''Sets the value of any pure clauses so that their external value is True. Removes all 
          caluses containig those clauses
          
-         Returns: bool representing if the proposition was changed at all in the process'''
+         Returns: bool representing if the proposition was changed at all in the process
+         
+         Raises: AssertionError if any assertions found to be untrue'''
+        
         changed = False
-        var_signs = {}
-        var_uniformity = {}
+        var_signs = {} # Literal variable (str) : Literal sign (str)
+        var_uniformity = {} # Literal variable (str) : boolean representing literal sign uniformity
         for clause in self.__proposition:
-            assert isinstance(clause, Clause), "non-Clause found during pure clause check"
+            # Checks that a given variable has sign uniformity throughout the proposition,
+            # the status of this check is noted in var_uniformity
+            assert isinstance(clause, Clause), "Non-Clause found during pure clause check"
             for lit in clause:
-                assert isinstance(lit, Literal), "non-Literal found within a clause"
+                assert isinstance(lit, Literal), "Non-Literal found within a Clause"
                 lit_var = lit.get_variable()
                 lit_sign = lit.get_sign()
                 if lit_var in var_signs:
-                    var_uniformity[lit_var] = False if var_signs[lit_var] == lit_sign else var_uniformity[lit_var]
+                    if var_signs[lit_var] != lit_sign:
+                        var_uniformity[lit_var] = False
                 else:
                     var_signs[lit_var] = lit_sign
                     var_uniformity[lit_var] = True
+
         for clause in self.__proposition:
+            # Literals whose value in var_uniformity is True assigned a bool such that their 
+            # external values are True and the clauses containing them may be removed from 
+            # the proposition 
             for lit in clause:
-                assert isinstance(lit, Literal)
+                assert isinstance(lit, Literal), "Non-Literal found within a Clause"
                 lit_var = lit.get_variable()
-                lit_sign = lit.get_sign()
                 if var_uniformity[lit_var]:
+                    lit_sign = lit.get_sign()
                     self.__variables[lit_var] = True if lit_sign == 'pos' else 'False'
                     self.__proposition.remove(clause)
+                    changed = True
                     break
         return changed
 
-    def unit_clause_heuristic(self) -> str:
-        '''Sets the value of any unit clauses so their external calculated value is True.
-        Checks the proposition for any sign contradictions on the unit clauses.
-        Removes the unit clauses. Removes literals from clauses if they have a negated sign
-        but the same variable as a unit clause; removes the clause from the proposition 
-        if the sign is the same.
-        
-        Returns: string representing if the proposition was changed in the process or if a 
-        contradiction was found, allowing the proposition to be labeled unsatisfiable'''
-        uclauses = {} # Literal variable (str) : Literal sign (str)  
-        for item in self.__proposition:
-            # iterate through proposition, remove all empty clauses and tranform Clauses of
-            # length 1 to unit clauses (Literals) 
-            if isinstance(item, Clause):
-                if item.is_empty():
-                    self.remove(item)
-                elif len(item) == 1:
-                    new_unit = item[0]
-                    self.remove(item)
-                    self.ADD(new_unit)
 
-        for item in self.__proposition:
-            # finds all unit clauses and adds their attributes to uclauses if they are not 
-            # already in it and remove the Literal from the proposition, otherwise check that the
-            # signs match between the two Literals; if they don't, return unsat by contradiction
-            if isinstance(item, Literal):
-                lit_var = item.get_variable()
-                lit_sign = item.get_sign()
-                if lit_var in uclauses:
-                    # if the Literal variable is in uclauses, checks the sign is the same as in
-                    # this Literal; if not, unsat by contradiction 
-                    if lit_sign != uclauses[lit_var]:
-                        return 'unsat' # by contradiction
-                else:
-                    uclauses[lit_var] = lit_sign
-                    self.__variables[lit_var] = True if lit_sign == 'pos' else False
-                self.__proposition.remove(item)
-
-        for i, clause in enumerate(self.__proposition):
-            # If the Literal variable is in uclauses, removes clause from the proposition if the 
-            # signs match; removes the Literal from the Clause if the signs don't match
-            removals = []
-            assert isinstance(clause, Clause), "Only Clauses should be in the proposition at this point"
-            for lit in clause:
-                assert isinstance(lit, Literal), "Clauses may only contain Literals"
-                lit_var = lit.get_variable()
-                if lit_var in uclauses:
-                    if lit.get_sign() == uclauses[lit_var]:
-                        removals.append(i)
-                        break
-                    else:
-                        self.__proposition[i] = clause.remove(lit)
-            for num in removals:
-                # removes the clauses marked for removal earlier
-                self.__proposition.remove(self.__proposition[num])
-
-        return DPLL.CHANGED if len(uclauses) else DPLL.UNCHANGED
-    
