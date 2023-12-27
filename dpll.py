@@ -34,31 +34,51 @@ it is unsatisfiable by contradiction.
 The variable names and their values are tracked as the solver progresses so that if it is 
 satisfiable they may be returned.
 """
+from typing import Union, Iterator
 from Literal import Literal
 from Clause import Clause
 
-# Constants:
-UNSAT = 'unsat'
-SAT = 'sat'
-CHANGED = 'changed'
-UNCHANGED = 'unchanged'
-
-
 class DPLL(object):
-    """DPLL object contains a proposition in conjunctive normal form"""
+    """DPLL object contains a proposition in conjunctive normal form
+    
+    Class Attributes:
+        UNSAT: returned when the proposition is unsatisfiable
+        SAT: returned when the propostion is satisfiable
+        CHANGED: returned when the unit_clause_hueristic changes the proposition
+        UNCHANGED: returned when the unit_clause_hueristic changes the proposition
+        
+    Instance Attributes:
+        variables: a dict of all the variables in every Literal in the proposition and their 
+        corresponding boolean values; initialized to None, and finalized to their necessary 
+        values for the proposition to be solved if it is satisfiable
+        proposition: a list of Literal and/or Clause objects"""
+    
+    # Class Attributes:
+    UNSAT = 'unsat'
+    SAT = 'sat'
+    CHANGED = 'changed'
+    UNCHANGED = 'unchanged'
 
-    def __init__(self, *args) -> None:
+    def __init__(self, *args: Union[Literal, Clause, set[Literal]]):
+        """Constructor function produces the proposition for the DPLL by appropriately
+        adding the Literals and Clauses to the proposition attribute. Also produces the 
+        variables attribute dict by adding each Literal variable and initializing its value 
+        to None.
+        
+        Raises:
+            TypeError if the object being added does not meet criteria"""
+        
         self.__variables = {}
         self.__proposition = []
-        for item in args:
-            if isinstance(item, set):
+        for item in args: 
+            if isinstance(item, set): 
                 while len(item):
-                    x = item.pop()
-                    if not isinstance(x, (Clause, Literal)):
+                    lit = item.pop()
+                    if not isinstance(lit, Literal):
                         raise TypeError("""DPLL proposition can only be made up of 
                                         Literal and Clause objects.""")
-                    self.__variables[x.get_variable()] = None
-                    self.__proposition.append(x)
+                    self.__variables[lit.get_variable()] = None
+                    self.__proposition.append(lit)
             elif isinstance(item, Literal):
                     self.__proposition.append(item)
                     self.__variables[item.get_variable()] = None
@@ -70,41 +90,66 @@ class DPLL(object):
                 raise TypeError("A DPLL object only accepts Literal and Clause objects in the proposition.")
 
 
-    def ADD(self, item):
+    def ADD(self, item: Union[Literal, Clause, set[Literal]]):
+        """Adds item to the proposition attribute
+
+        Raises:
+            TypeError if the object being added does not meet criteria"""
+        
         if isinstance(item, set): 
-            # negating a clause produces separated negated literals that must be 
-            # added individually
             while len(item):
-                x = item.pop()
-                if not isinstance(x, (Clause, Literal)):
+                lit = item.pop()
+                if not isinstance(lit, Literal):
                     raise TypeError("""DPLL proposition can only be made up of 
                                     Literal and Clause objects.""")
-                self.__variables[x.get_variable()] = None
-                self.__proposition.append(x)
+                self.__variables[lit.get_variable()] = None
+                self.__proposition.append(lit)
         elif isinstance(item, Literal):
             self.__variables[item.get_variable()] = None
             self.__proposition.append(item) # add the literal directly to the proposition
         elif isinstance(item, Clause):
+            if item.is_empty():
+                return
             for lit in item:
                 self.__variables[lit.get_variable()] = None
             self.__proposition.append(item) # add the clause directly to the proposition
         else:
             raise TypeError("DPLL proposition can only be made up of Literal and Clause objects.")
         
-    def remove(self, clause):
-        if clause in self.__proposition:
-            self.__proposition.remove(clause)
+    def remove(self, item: Union[Literal, Clause]):
+        """Removes item from the proposition if it contains item
+        
+        Raises:
+            TypeError if item is not a Literal or a Clause"""
+        
+        if not isinstance(item, (Literal, Clause)):
+            raise TypeError("A DPLL may only contain Literals or Clauses")
+        if item in self:
+            self.__proposition.remove(item)
     
-    def __iter__(self):
+    def __contains__(self, item: Union[Literal, Clause]) -> bool:
+        """Returns: a boolean representing if the proposition contains item
+        
+        Raises:
+            TypeError if item is not a Literal or a Clause"""
+        
+        if not isinstance(item, (Literal, Clause)):
+            raise TypeError("A DPLL may only contain Literals or Clauses")
+        return item in self.__proposition
+    
+    def __iter__(self) -> Iterator:
+        """Returns: an iterator """
         return iter(self.__proposition)
     
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Union[Literal, Clause]:
+        """Returns: the object in the proposition at index"""
         return self.__proposition[index]
     
-    def is_empty(self):
+    def is_empty(self) -> bool:
+        """Returns: a boolean representing if the proposition is empty or not"""
         return not len(self.__proposition)
 
-    def sat(self):
+    def sat(self) -> str:
         """Returns if the proposition is satisfiable or not"""
         # check if all the clauses in the proposition are true, if they are, the proposition is satisfied
         if self.is_empty():
@@ -209,60 +254,61 @@ class DPLL(object):
                     break
         return changed
 
-    """TODO: make it so if a clause is culled down to a single literal, change it to a unit clause"""
-    def unit_clause_heuristic(self):
-        '''Sets the value of any unit clauses so their outward calculated value is True.
+    def unit_clause_heuristic(self) -> str:
+        '''Sets the value of any unit clauses so their external calculated value is True.
         Checks the proposition for any sign contradictions on the unit clauses.
         Removes the unit clauses. Removes literals from clauses if they have a negated sign
-        if they have the same variable as a unit clause; removes the clause from the proposition 
-        if the sign is positive.
+        but the same variable as a unit clause; removes the clause from the proposition 
+        if the sign is the same.
         
-        Returns: string representing if the proposition was changed in the process or if a contradiction
-        was found, allowing the proposition to be labeled unsatisfiable'''
-        changed = False
-        uclauses = {} # variable : bool (True if lit sign is 'pos' else False)
-        for clause in self.__proposition:
-            # if the clause is empty: remove and continue in loop
-            if not len(clause):
-                self.remove(clause)
-                continue
-            # if the clause only has one literal in it, it is now a unit clause
-            # add it to the back and continue in loop, hit it when get to it in added spot
-            if len(clause) == 1:
-                new_unit = clause[0]
-                self.remove(clause)
-                self.ADD(new_unit)
-                continue
-            # gather the unit caluses into a dict of their variables and sign
-            # check for contradictions
-            if isinstance(clause, Literal):
-                lit_var = clause.get_variable()
-                lit_sign = clause.get_sign()
-                # gather variable and sign, check if the variable is already a key in the dict
-                # if it is, check its sign against the one in the the dict at that key
+        Returns: string representing if the proposition was changed in the process or if a 
+        contradiction was found, allowing the proposition to be labeled unsatisfiable'''
+        uclauses = {} # Literal variable (str) : Literal sign (str)  
+        for item in self.__proposition:
+            # iterate through proposition, remove all empty clauses and tranform Clauses of
+            # length 1 to unit clauses (Literals) 
+            if isinstance(item, Clause):
+                if item.is_empty():
+                    self.remove(item)
+                elif len(item) == 1:
+                    new_unit = item[0]
+                    self.remove(item)
+                    self.ADD(new_unit)
+
+        for item in self.__proposition:
+            # finds all unit clauses and adds their attributes to uclauses if they are not 
+            # already in it and remove the Literal from the proposition, otherwise check that the
+            # signs match between the two Literals; if they don't, return unsat by contradiction
+            if isinstance(item, Literal):
+                lit_var = item.get_variable()
+                lit_sign = item.get_sign()
                 if lit_var in uclauses:
-                    # if it's not the same sign, unsat by contradiction; can't have to literals,
-                    # same variable 
+                    # if the Literal variable is in uclauses, checks the sign is the same as in
+                    # this Literal; if not, unsat by contradiction 
                     if lit_sign != uclauses[lit_var]:
-                        return 'unsat'
+                        return 'unsat' # by contradiction
                 else:
-                    # if it's not in the dict, put it in the dict and set it's value to the literal's sign
                     uclauses[lit_var] = lit_sign
                     self.__variables[lit_var] = True if lit_sign == 'pos' else False
-                # either way, remove it from the proposition as it can't affect its truthiness
-                self.__proposition.remove(clause)
-                changed = True
-        for clause in self.__proposition:
-            if isinstance(clause, Clause):
-                for lit in clause:
-                    assert isinstance(lit, Literal), f"{clause} contains {lit} which is not a Literal."
-                    lit_var = lit.get_variable()
-                    if lit_var in uclauses:
-                        if lit.get_sign() == uclauses[lit_var]:
-                            self.__proposition.remove(clause)
-                            break
-                        else:
-                            clause.remove(lit)
-                            continue
-        return "changed" if changed else "unchanged"
+                self.__proposition.remove(item)
+
+        for i, clause in enumerate(self.__proposition):
+            # If the Literal variable is in uclauses, removes clause from the proposition if the 
+            # signs match; removes the Literal from the Clause if the signs don't match
+            removals = []
+            assert isinstance(clause, Clause), "Only Clauses should be in the proposition at this point"
+            for lit in clause:
+                assert isinstance(lit, Literal), "Clauses may only contain Literals"
+                lit_var = lit.get_variable()
+                if lit_var in uclauses:
+                    if lit.get_sign() == uclauses[lit_var]:
+                        removals.append(i)
+                        break
+                    else:
+                        self.__proposition[i] = clause.remove(lit)
+            for num in removals:
+                # removes the clauses marked for removal earlier
+                self.__proposition.remove(self.__proposition[num])
+
+        return DPLL.CHANGED if len(uclauses) else DPLL.UNCHANGED
     
