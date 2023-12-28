@@ -37,7 +37,7 @@ class Literal(object):
         lit_cp = copy.copy(self)
         lit_cp.flip_sign()
         if lit_cp.get_status is not None:
-            lit_cp.set_calculated_val()
+            lit_cp.__set_calculated_val()
         return lit_cp
     
     def get_variable(self) -> str:
@@ -60,7 +60,7 @@ class Literal(object):
         if not isinstance(val, bool):
             raise TypeError("set_status only takes bool type")
         self.__status = val
-        self.set_calculated_val()
+        self.__set_calculated_val()
 
     def get_status(self) -> bool:
         """Returns: the boolean value of the literal instance attribute status"""
@@ -71,7 +71,7 @@ class Literal(object):
         calculated_val"""
         return self.__calculated_val
     
-    def set_calculated_val(self):
+    def __set_calculated_val(self):
         """sets the calculated value of the literal based on the sign and 
         status instance attributes"""
         if self.__status is None:
@@ -96,13 +96,22 @@ class Literal(object):
     
     def __copy__(self) -> 'Literal':
         """performs a shallow copy of the Literal and its attributes
-        Returns: a copy of the Literal"""
+        Returns: a shallow copy of the Literal"""
         cp = Literal(self.__variable)
-        if self.__sign == '-':
-            cp.flip_sign()
-        if self.__status is not None:
-            cp.set_status(self.__status)
-            cp.set_calculated_val()
+        cp._Literal__sign = self.__sign
+        cp._Literal__status = self.__status
+        cp._Literal__calculated_val = self.__calculated_val
+        return cp
+
+    def __deepcopy__(self, memo) -> 'Literal':
+        """performs a deep copy of the Literal and its attributes
+        since the attributes are all immutable, it is the same as a shallow copy
+        Returns: a deep copy of the Literal"""
+        cp = Literal(self.__variable)
+        memo[id(self)] = cp
+        cp._Literal__sign = self.__sign
+        cp._Literal__status = self.__status
+        cp._Literal__calculated_val = self.__calculated_val
         return cp
     
     def __bool__(self):

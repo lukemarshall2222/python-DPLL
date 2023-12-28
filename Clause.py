@@ -1,3 +1,6 @@
+"""Author: Luke Marshall
+
+This module contains the definition of a Clause object to be used in a DPLL solver"""
 from typing import Union, Iterator
 import copy
 from Literal import Literal
@@ -29,7 +32,7 @@ class Clause(object):
             else:
                 raise TypeError("""Clause object only accepts Literal or non-negated 
                                 Clause objects as input.""")
-        # status checks:
+        # status check:
         self.set_status()
         # remove duplicates
         self.__filter_duplicates()
@@ -39,6 +42,7 @@ class Clause(object):
         to calculate and set the status attribute"""
         none_in = true_in = False
         for lit in self.__clause:
+            assert isinstance(lit, Literal)
             lit_val = lit.get_calculated_val()
             if lit_val:
                 true_in = True
@@ -61,6 +65,7 @@ class Clause(object):
         Literals with the same variables and opposite signs"""
         var_dict = {} # variable name: sign
         for lit in self.__clause:
+            assert isinstance(lit, Literal)
             lit_var = lit.get_variable()
             lit_sign = lit.get_sign()
             if lit_var in var_dict:
@@ -133,7 +138,7 @@ class Clause(object):
             raise TypeError("Only Literal object types may be removed from a Clause")
         if item not in self:
             raise ValueError("Literal not in Clause")
-        reduced_clause = copy.copy(self)
+        reduced_clause = copy.deepcopy(self)
         reduced_clause._Clause__clause.remove(item) 
         reduced_clause.set_status()
         return reduced_clause
@@ -172,12 +177,21 @@ class Clause(object):
         return self.__clause[index]
     
     def __copy__(self) -> 'Clause':
-        """Returns: a Clause shallow copy"""
-        cl_cp = []
-        for lit in self.__clause:
-            lit_cp = copy.copy(lit)
-            cl_cp.append(lit_cp)
-        return Clause(cl_cp)
+        """Implements a shallow copy of the Clause
+        Returns: a shallow copy of the Clause"""
+        cp = Clause()
+        cp._Clause__clause = self.__clause.copy()
+        cp.set_status
+        return cp
+    
+    def __deepcopy__(self, memo) -> 'Clause':
+        """Implements a deep copy of the Clause
+        Returns: a deep copy of the Clause"""
+        cp = Clause()
+        memo[id(self)] = cp
+        cp._Clause__clause = [copy.deepcopy(lit, memo) for lit in self.__clause]
+        cp.set_status()
+        return cp
     
     def __eq__(self, other: 'Clause') -> bool:
         "Returns: a boolean representing if a List or another Clause contains the same "
