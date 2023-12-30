@@ -38,27 +38,28 @@ class Clause(object):
         self.__filter_duplicates()
 
     def set_status(self):
-        """checks the status of Literals in the clause attribute for their statuses
-        to calculate and set the status attribute"""
-        none_in = true_in = False
-        for lit in self.__clause:
-            assert isinstance(lit, Literal)
-            lit_val = lit.get_calculated_val()
-            if lit_val:
-                true_in = True
-            elif lit_val == None:
-                none_in = True
-        if true_in:
-            self.__status = True
-        elif none_in:
-            self.__status = None
-        else:
-            self.__status = False
-        
-        self.__status = True if self.__tautology_check() else self.__status
-
+        """checks the external status of Literals in the clause attribute to calculate and set 
+        the status attribute"""
         if self.is_empty():
             self.__status = None
+        elif self.__tautology_check():
+            self.__status = True
+        else:
+            none_in = true_in = False
+            for lit in self.__clause:
+                assert isinstance(lit, Literal)
+                lit_val = lit.get_calculated_val()
+                if lit_val:
+                    true_in = True
+                elif lit_val == None:
+                    none_in = True
+            if true_in:
+                self.__status = True
+            elif none_in:
+                self.__status = None
+            else:
+                self.__status = False
+            
 
     def __tautology_check(self) -> bool:
         """Returns: a boolean representing if the clause attribute contains
