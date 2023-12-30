@@ -150,7 +150,7 @@ class Clause(object):
         Moves negations inside clause e.g. :
             ~(~a) = a
             ~(a v b) = ~a ∧ ~b"""
-        negated = copy.copy(self)
+        negated = copy.deepcopy(self)
         negated_set = set()
         for lit in negated:
             negated_set.add(lit.NOT())
@@ -197,9 +197,9 @@ class Clause(object):
         "Returns: a boolean representing if a List or another Clause contains the same "
         same = False
         if not isinstance(other, (Clause, list)):
-            raise TypeError("Equality not defined between these two objects.")
+            return False
         elif isinstance(other, Clause):
-            same = True if self.__clause == other.__clause else same
+            same = True if self.__clause == other._Clause__clause else same
         else:
             same = True if self.__clause == other else same
         return same

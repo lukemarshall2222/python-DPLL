@@ -84,6 +84,8 @@ class Literal(object):
     def __eq__(self, other: 'Literal',) -> bool:
         """Returns: a boolean representing if the variables of two literals are
         the same"""
+        if not isinstance(other, Literal):
+            return False
         same = True
         same = False if self.get_variable() != other.get_variable() else same
         same = False if self.get_sign() != other.get_sign() else same

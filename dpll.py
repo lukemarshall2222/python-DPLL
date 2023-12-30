@@ -3,7 +3,7 @@
 Luke Marshall
 DPLL solver
 """
-from typing import Union, Iterator
+from typing import Any, Union, Iterator
 from Literal import Literal
 from Clause import Clause
 import copy
@@ -44,8 +44,7 @@ class DPLL(object):
             if isinstance(item, set):
                 # a negated clause produces a set of negated Literals that must individually 
                 # be added to the proposition 
-                while len(item):
-                    lit = item.pop()
+                for lit in item:
                     if not isinstance(lit, Literal):
                         raise TypeError("""DPLL proposition can only be made up of 
                                         Literal and Clause objects.""")
@@ -60,7 +59,22 @@ class DPLL(object):
                     self.__variables[lit.get_variable()] = None
             else:
                 raise TypeError("A DPLL object only accepts Literal and Clause objects in the proposition.")
-
+            
+    def __str__(self) -> str:
+        """Returns: a string representation of the proposition"""
+        return f"{[str(cl) for cl in self.__proposition]}"
+    
+    def __repr__(self) -> str:
+        """Returns: a string representation of the proposition"""
+        return f"{[repr(cl) for cl in self.__proposition]}"
+    
+    def get_proposition(self):
+        """Returns: the proposition attribute"""
+        return self.__proposition
+    
+    def get_variables(self) -> dict[str, Union[bool, None]]:
+        """Returns: the variables attribute"""
+        return self.__variables
 
     def ADD(self, item: Union[Literal, Clause, set[Literal]]):
         """Adds item to the proposition attribute
@@ -68,28 +82,38 @@ class DPLL(object):
         Raises:
             TypeError if the object being added does not meet criteria"""
         # add the Clauses and Literals based on allowable types: 
-        if isinstance(item, set): 
-            while len(item):
-                lit = item.pop()
+        if isinstance(item, set):
+            # a negated Clause produces a set of negated Literals; each must be added individually 
+            for lit in item:
                 if not isinstance(lit, Literal):
                     raise TypeError("""DPLL proposition can only be made up of 
                                     Literal and Clause objects.""")
-                self.__variables[lit.get_variable()] = None
+                if (lit_var := lit.get_variable()) not in self.__variables:
+                    self.__variables[lit_var] = None
                 self.__proposition.append(lit)
         elif isinstance(item, Literal):
-            self.__variables[item.get_variable()] = None
-            self.__proposition.append(item) # add the literal directly to the proposition
+            # Literals may be added directly, to proposition and variables
+            if (item_var := item.get_variable()) not in self.__variables:
+                self.__variables[item_var] = None
+            self.__proposition.append(item)
         elif isinstance(item, Clause):
+            # Clauses may be added directly, but the Literals they contains must be added to the 
+            # variables individually
             if item.is_empty():
                 return
             for lit in item:
-                self.__variables[lit.get_variable()] = None
+                if (lit_var := lit.get_variable()) not in self.__variables:
+                    self.__variables[lit_var] = None
             self.__proposition.append(item) # add the clause directly to the proposition
         else:
             raise TypeError("DPLL proposition can only be made up of Literal and Clause objects.")
         
-    def remove(self, item: Union[Literal, Clause]):
+    def __disregard(self, item: Union[Literal, Clause]):
         """Removes item from the proposition if it contains item
+        Different than a pure removal because it does not attempt to remove the 
+        variable(s) in the disregarded Literal(s) from the variable attribute.
+        If given a Literal, the method will look for a unit clause, it will not find 
+        it within a Clause. 
         
         Raises:
             TypeError if item is not a Literal or a Clause"""
@@ -110,16 +134,20 @@ class DPLL(object):
         return item in self.__proposition
     
     def __iter__(self) -> Iterator:
-        """Returns: an iterator """
+        """Returns: an iterator through the proposition attribute"""
         return iter(self.__proposition)
     
     def __getitem__(self, index: int) -> Union[Literal, Clause]:
-        """Returns: the object in the proposition at index"""
+        """Returns: the object in the proposition attribute at index"""
         return self.__proposition[index]
     
     def is_empty(self) -> bool:
         """Returns: a boolean representing if the proposition is empty or not"""
         return not len(self.__proposition)
+    
+    def __len__(self):
+        """Returns: the length of the proposition list"""
+        return len(self.__proposition)
     
     def __copy__(self) -> 'DPLL':
         """Implements a shallow copy of the DPLL
@@ -138,13 +166,16 @@ class DPLL(object):
         cp._DPLL__variables = copy.deepcopy(self.__variables, memo)
         return cp
 
-    def sat(self) -> str:
+    def solve(self) -> str:
         """Returns: a string representing if the proposition is satisfiable or not
                 'sat' if satisfiable
                 'unsat' if not satisfiable"""
+        
+        self.simplify()
         # Base case: the proposition is True so it contains only True clauses, therefore the 
         # proposition will eventually be empty if all True clauses are removed
         if self.is_empty():
+            # an empty proposition is satisfiable
             return DPLL.SAT
         values = set()
         for clause in self.__proposition:
@@ -152,14 +183,17 @@ class DPLL(object):
                 values.add(clause.get_calculated_val())
             elif isinstance(clause, Clause):
                 values.add(clause.get_status())
-        if (True in values) and (False in values):
-            raise ValueError("contradiction: cannot be sat and unsat simultaneously")
+        if (False in values):
+            # if any clause has the external value of False, the proposition is unsatisfiable
+            return DPLL.UNSAT
         elif (None in values):
+            # if any clause has the external value of None, the proposition satisfiability is
+            # still ambiguous
             pass
         elif (True in values):
+            # None and False already not in values, so only things in the proposition are clauses
+            # with the external value of True, ∴ the proposition is satisfiable
             return DPLL.SAT
-        elif (False in values):
-            return DPLL.UNSAT
         
         # apply unit clause heristic until the proposition is either unsat or did not change with
         # most recent call to UCH
@@ -167,13 +201,13 @@ class DPLL(object):
         if res == DPLL.UNSAT:
             return res
         elif res == DPLL.CHANGED:
-            return self.sat()
+            return self.solve()
         
         # apply pure clause hueristic until the proposition did not change with most recent call 
-        # to UHC
+        # to PCH
         res2 = self.pure_clause_hueristic()
         if res2:
-            return self.sat() 
+            return self.solve() 
         
         # apply guess and check
         dpll_cp = copy.deepcopy(self)
@@ -187,49 +221,50 @@ class DPLL(object):
                 guess = clause[0]
         guess_var = guess.get_variable()
         guess_sign = guess.get_sign()
-        # assigns the the value to the variable that makes the external value of the Literal True
+        # assigns the guess value to the variable that makes the external value of the Literal True
         # so at least one Clause may be removed from the proposition
-        self.__variables[guess_var] = True if guess_sign == 'pos' else False
-        removals = []
-        for i, clause in enumerate(self.__proposition):
-            # removes approprite Literals and Clauses according to the guess
-            assert isinstance(clause, Clause)
-            for lit in clause:
-                assert isinstance(lit, Literal)
-                if lit.get_variable() == guess_var:
-                    if lit.get_sign() == 'pos':
-                        removals.append(i)
-                        break
-                    else:
-                        self.__proposition[i] = clause.remove(lit)
-        for num in removals:
-            self.remove[self.__proposition[num]]  
+        self.__guess(guess_var, True if guess_sign == 'pos' else False)
+        self.simplify()
 
         # check the guess:          
-        res3 = self.sat()
+        res3 = self.solve()
         if res3 == 'sat':
             return res3
         else:
-            self = dpll_cp
+            self.__proposition = dpll_cp.get_proposition()
+            self.__variables = dpll_cp.get_variables()
 
         # First guess was a failure, guess the opposite value:
-        removals = []
-        self.__variables[guess] = False
-        for i, clause in enumerate(self.__proposition):
-            assert isinstance(clause, Clause)
-            for lit in clause:
-                assert isinstance(lit, Literal)
-                if lit.get_variable() == guess:
-                    if lit.get_sign() == 'neg':
-                        removals.append(i)
-                        break
-                    else:
-                        self.__proposition[i] = clause.remove(lit)
-        for num in removals:
-            self.remove(self.__proposition[num])
+        self.__guess(guess_var, False if guess_sign == 'pos' else True)
+        self.simplify()
 
-        # Second guess is either True or the resulting failure means the proposition is unsat
-        return self.sat()
+        # Second guess is either True XOR the resulting failure means the proposition is unsat
+        return self.solve()
+    
+    def simplify(self):
+        """Simplifies the proposition by disregarding the Literals with an external value of True;
+        also the Clauses with an external value of True, or that are empty, and substitutes the 
+        Literal contained within a Clause of length 1 in for the Clause"""
+        to_disregard = []
+        for i, item in enumerate(self):
+            if isinstance(item, Literal):
+                if item.get_calculated_val():
+                    to_disregard.append(item)
+            elif isinstance(item, Clause):
+                if item.get_status() or item.is_empty():
+                    to_disregard.append(item)
+                    continue
+                elif len(item) == 1:
+                    to_disregard.append(item)
+                    self.ADD(item[0])
+                    continue
+                for lit in item:
+                    if lit.get_calculated_val() == False:
+                        self.__proposition[i] = item.remove(lit)
+            else:
+                raise TypeError("Proposition may only contain Literals and Clauses")
+        for item in to_disregard:
+            self.__disregard(item)
 
     def unit_clause_heuristic(self) -> str:
             '''Sets the value of any unit clauses so their external calculated value is True.
@@ -240,23 +275,11 @@ class DPLL(object):
             
             Returns: string representing if the proposition was changed in the process or if a 
             contradiction was found, allowing the proposition to be labeled unsatisfiable'''
-            uclauses = {} # Literal variable (str) : Literal sign (str)  
-            for item in self.__proposition:
-                # iterate through proposition, remove all empty clauses and tranform Clauses of
-                # length 1 to unit clauses (Literals) 
-                if isinstance(item, Clause):
-                    if item.is_empty():
-                        self.remove(item)
-                    elif len(item) == 1:
-                        new_unit = item[0]
-                        self.remove(item)
-                        self.ADD(new_unit)
 
-            for item in self.__proposition:
-                # finds all unit clauses and adds their attributes to uclauses if they are not 
-                # already in it and remove the Literal from the proposition, otherwise check that 
-                # the signs match between the two Literals; if they don't, return unsat by 
-                # contradiction
+            uclauses = {} # Literal variable (str) : Literal sign (str)
+            for item in self:
+                # finds all unit clauses and adds their attributes to uclauses, sets the status 
+                # of the Literal, checks there are no sign contradictions among the unit clauses
                 if isinstance(item, Literal):
                     lit_var = item.get_variable()
                     lit_sign = item.get_sign()
@@ -264,31 +287,22 @@ class DPLL(object):
                         # if the Literal variable is in uclauses, checks the sign is the same as in
                         # this Literal; if not, unsat by contradiction 
                         if lit_sign != uclauses[lit_var]:
-                            return 'unsat' # by contradiction
+                            return DPLL.UNSAT # by contradiction
                     else:
                         uclauses[lit_var] = lit_sign
                         self.__variables[lit_var] = True if lit_sign == 'pos' else False
-                    self.__proposition.remove(item)
+                    item.set_status(self.__variables[lit_var])
+            self.simplify()
 
-            for i, clause in enumerate(self.__proposition):
-                # If the Literal variable is in uclauses, marks clause for removal from the 
-                # proposition if the signs match; removes the Literal from the Clause if the 
-                # signs don't match
-                removals = []
-                assert isinstance(clause, Clause), "Unit clause found in proposition after unit clause removal"
-                for lit in clause:
-                    assert isinstance(lit, Literal), "Non-Literal found within Clause"
-                    lit_var = lit.get_variable()
-                    if lit_var in uclauses:
-                        if lit.get_sign() == uclauses[lit_var]:
-                            removals.append(i)
-                            break
-                        else:
-                            self.__proposition[i] = clause.remove(lit)
-                for num in removals:
-                    # removes the clauses marked for removal earlier
-                    self.__proposition.remove(self.__proposition[num])
-
+            for clause in self:
+                # If the Literal variable is in uclauses, sets the status of the Literal 
+                # according to the variables attribute
+                if isinstance(clause, Clause):
+                    for lit in clause:
+                        assert isinstance(lit, Literal), "Non-Literal found within Clause"
+                        if (lit_var := lit.get_variable()) in uclauses:
+                            lit.set_status(self.__variables[lit_var])
+            self.simplify()
             return DPLL.CHANGED if len(uclauses) else DPLL.UNCHANGED
 
     def pure_clause_hueristic(self) -> bool:
@@ -300,36 +314,47 @@ class DPLL(object):
          Raises: AssertionError if any assertions found to be untrue'''
         
         changed = False
-        var_signs = {} # Literal variable (str) : Literal sign (str)
-        var_uniformity = {} # Literal variable (str) : boolean representing literal sign uniformity
-        for clause in self.__proposition:
+        # Literal variable (str) : Tuple(Literal sign (str), <---                            
+        var_signs_uniformity = {} # ---> bool representing the uniformity of the signs throughout)
+        for clause in self:
             # Checks that a given variable has sign uniformity throughout the proposition,
-            # the status of this check is noted in var_uniformity
-            assert isinstance(clause, Clause), "Non-Clause found during pure clause check"
-            for lit in clause:
-                assert isinstance(lit, Literal), "Non-Literal found within a Clause"
-                lit_var = lit.get_variable()
-                lit_sign = lit.get_sign()
-                if lit_var in var_signs:
-                    if var_signs[lit_var] != lit_sign:
-                        var_uniformity[lit_var] = False
-                else:
-                    var_signs[lit_var] = lit_sign
-                    var_uniformity[lit_var] = True
-
-        for clause in self.__proposition:
-            # Literals whose value in var_uniformity is True assigned a bool such that their 
-            # external values are True and the clauses containing them may be removed from 
-            # the proposition 
-            for lit in clause:
-                assert isinstance(lit, Literal), "Non-Literal found within a Clause"
-                lit_var = lit.get_variable()
-                if var_uniformity[lit_var]:
+            # the status of this check is noted in var_signs_uniformity
+            if isinstance(clause, Clause):
+                for lit in clause:
+                    assert isinstance(lit, Literal), "Non-Literal found within a Clause"
+                    lit_var = lit.get_variable()
                     lit_sign = lit.get_sign()
-                    self.__variables[lit_var] = True if lit_sign == 'pos' else 'False'
-                    self.__proposition.remove(clause)
-                    changed = True
-                    break
+                    if lit_var in var_signs_uniformity:
+                        if var_signs_uniformity[lit_var][0] != lit_sign:
+                            var_signs_uniformity[lit_var][1] = False
+                    else:
+                        var_signs_uniformity[lit_var] = [lit_sign, True]
+
+        uniform_vars = set(var for var in var_signs_uniformity if var_signs_uniformity[var][1])
+        for clause in self:
+            # Literals whose value in var_uniformity is True assigned a bool such that their 
+            # external values are True and the clauses containing them may be disregarded from 
+            # the proposition 
+            if isinstance(clause, Clause):
+                for lit in clause:
+                    assert isinstance(lit, Literal), "Non-Literal found within a Clause"
+                    lit_var = lit.get_variable()
+                    if lit_var in uniform_vars:
+                        lit_sign = lit.get_sign()
+                        self.__variables[lit_var] = True if lit_sign == 'pos' else False
+                        lit.set_status(self.__variables[lit_var])
+                        changed = True
+        self.simplify()
         return changed
+    
+    def __guess(self, var: str, val: bool):
+        self.__variables[var] = val
+        for clause in self:
+            assert isinstance(clause, Clause)
+            for lit in clause:
+                assert isinstance(lit, Literal)
+                if lit.get_variable() == var:
+                    lit.set_status(val)
+
 
 
