@@ -165,6 +165,22 @@ class DPLL(object):
         cp._DPLL__proposition = [copy.deepcopy(item, memo) for item in self.__proposition]        
         cp._DPLL__variables = copy.deepcopy(self.__variables, memo)
         return cp
+    
+    def solve_for_variables(self) -> Union[dict, None]:
+        """Uses the solver process to set the variable values in the variables attribute.
+        
+        Returns: either None if the proposition is unsatisfiable, or the dict of variables
+        and their boolean values used to satisfy the proposition"""
+        
+        res = self.solve()
+        if res == 'sat':
+            vars = self.__variables.copy()
+            for var in vars:
+                if vars[var] is None:
+                    vars[var] = 'either'
+            return vars
+        else:
+            return None
 
     def solve(self) -> str:
         """Returns: a string representing if the proposition is satisfiable or not
@@ -331,15 +347,20 @@ class DPLL(object):
                         var_signs_uniformity[lit_var] = [lit_sign, True]
 
         uniform_vars = set(var for var in var_signs_uniformity if var_signs_uniformity[var][1])
-        for clause in self:
+        for item in self:
             # Literals whose value in var_uniformity is True assigned a bool such that their 
             # external values are True and the clauses containing them may be disregarded from 
             # the proposition 
-            if isinstance(clause, Clause):
-                for lit in clause:
+            if isinstance(item, Literal):
+                if (lit_var := item.get_variable()) in uniform_vars:
+                    lit_sign = lit.get_sign()
+                    self.__variables[lit_var] = True if lit_sign == 'pos' else False
+                    lit.set_status(self.__variables[lit_var])
+                    changed = True
+            elif isinstance(item, Clause):
+                for lit in item:
                     assert isinstance(lit, Literal), "Non-Literal found within a Clause"
-                    lit_var = lit.get_variable()
-                    if lit_var in uniform_vars:
+                    if (lit_var := lit.get_variable()) in uniform_vars:
                         lit_sign = lit.get_sign()
                         self.__variables[lit_var] = True if lit_sign == 'pos' else False
                         lit.set_status(self.__variables[lit_var])

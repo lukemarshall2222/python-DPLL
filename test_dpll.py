@@ -322,7 +322,6 @@ def test_solve_hard_prop_3():
     cl12 = Clause(c_neg, f, b_neg, e_neg)
     dpll = DPLL(cl, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10, cl11, cl12, a_neg, b, c_neg, d)
     sat = dpll.solve()
-    print(dpll.get_variables())
     assert sat == 'unsat'
 
 def test_basic_solve_by_tautology():
@@ -343,3 +342,63 @@ def test_middling_solve_by_tautology():
     dpll = DPLL(cl, cl2)
     sat = dpll.solve()
     assert sat == 'sat'
+
+def test_middling_solve_unsat():
+    a = Literal('a')
+    a_neg = a.NOT()
+    b = Literal('b')
+    b_neg = b.NOT()
+    c = Literal('c')
+    c_neg = c.NOT()
+    cl = Clause(a, b)
+    cl2 = Clause(a_neg, c)
+    cl3 = Clause(b_neg, c_neg)
+    cl4 = Clause(a_neg, b_neg)
+    cl5 = Clause(a, c_neg)
+    cl6 = Clause(a_neg, b)
+    cl7 = Clause(a, b_neg)
+    dpll = DPLL(cl, cl2, cl3, cl4, cl5, cl6, cl7)
+    sat = dpll.solve()
+    assert sat == 'unsat'
+
+def test_solve_for_variables():
+    a = Literal('a')
+    a_neg = a.NOT()
+    b = Literal('b')
+    b_neg = b.NOT()
+    c = Literal('c')
+    c_neg = c.NOT()
+    d = Literal('d')
+    d_neg = d.NOT()
+    e = Literal('e')
+    e_neg = e.NOT()
+    f = Literal('f')
+    f_neg = f.NOT()
+    g = Literal('g')
+    g_neg = g.NOT()
+    h = Literal('h')
+    h_neg = h.NOT()
+    cl = Clause(a, b_neg, c, d_neg)
+    cl2 = Clause(a_neg, e, f, g_neg)
+    cl3 = Clause(b, c_neg, d, h_neg)
+    cl4 = Clause(c, f_neg, b, e)
+    cl5 = Clause(e_neg, g, h, a_neg)
+    cl6 = Clause(d, h_neg, g, a)
+    cl7 = Clause(c_neg, f, e_neg, h)
+    cl8 = Clause(a_neg, b_neg, c_neg, d)
+    cl9 = Clause(a, e_neg, f_neg, g)
+    cl10 = Clause(b_neg, c, d_neg, h)
+    cl11 = Clause(e, g_neg, h_neg, a)
+    cl12 = Clause(c_neg, f, b_neg, e_neg)
+    dpll = DPLL(cl, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10, cl11, cl12, a_neg, b, c_neg)
+    vars = dpll.solve_for_variables()
+    assert isinstance(vars, dict)
+    for var in vars:
+        assert vars[var] in (True, False, 'either')
+
+def test_solve_for_variables_2():
+    a = Literal('a')
+    a_neg = a.NOT()
+    dpll = DPLL(a, a_neg)
+    vars = dpll.solve_for_variables()
+    assert vars is None
