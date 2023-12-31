@@ -12,7 +12,12 @@ class Clause(object):
     Instance Attributes:
         clause: a list of Literal objects
         status: boolean representing the calculated value of the clause
-        based on the calculated values of the individual """
+        based on the calculated values of the individual 
+        
+    Key methods:
+       set_status: sets the status attribute based on the truthiness of the Literals contained 
+        in clause
+          """
     
     def __init__(self, *args: list[Union['Clause', Literal]]):
         """Initializes the Clause object"""
@@ -32,14 +37,22 @@ class Clause(object):
             else:
                 raise TypeError("""Clause object only accepts Literal or non-negated 
                                 Clause objects as input.""")
-        # status check:
+        # initialize status:
         self.set_status()
-        # remove duplicates
+        # remove duplicates:
         self.__filter_duplicates()
 
+    def __str__(self) -> str:
+        """Returns: string representation of the Literals in clause attribute"""
+        return f"{[str(lit) for lit in self.__clause]}"
+    
+    def __repr__(self):
+        """Returns: string representation of the Literals in clause attribute"""
+        return f"{[repr(lit) for lit in self.__clause]}"
+
     def set_status(self):
-        """checks the external status of Literals in the clause attribute to calculate and set 
-        the status attribute"""
+        """checks the external truth value of Literals in the clause attribute to calculate and
+        set the status attribute"""
         if self.is_empty():
             self.__status = None
         elif self.__tautology_check():
@@ -62,9 +75,9 @@ class Clause(object):
             
 
     def __tautology_check(self) -> bool:
-        """Returns: a boolean representing if the clause attribute contains
+        """Returns: a boolean representing if the clause attribute contains any
         Literals with the same variables and opposite signs"""
-        var_dict = {} # variable name: sign
+        var_dict = {} # Literal variable : Literal sign
         for lit in self.__clause:
             assert isinstance(lit, Literal)
             lit_var = lit.get_variable()
@@ -75,11 +88,6 @@ class Clause(object):
             else:
                 var_dict[lit_var] = lit_sign
         return False
-
-    def get_status(self) -> bool:
-        """Returns: a boolean represening the status of the clause"""
-        self.set_status()
-        return self.__status
     
     def __filter_duplicates(self):
         """Removes any duplicates from clause attribute"""
@@ -87,13 +95,10 @@ class Clause(object):
         self.__clause = [obj for obj in self.__clause if 
                          not (obj in seen or seen.add(obj))]
 
-    def __str__(self) -> str:
-        """Returns: string representation of the Literals in clause attribute"""
-        return f"{[str(lit) for lit in self.__clause]}"
-    
-    def __repr__(self):
-        """Returns: string representation of the Literals in clause attribute"""
-        return f"{[repr(lit) for lit in self.__clause]}"
+    def get_status(self) -> bool:
+        """Returns: a boolean represening the status of the clause"""
+        self.set_status()
+        return self.__status
 
     def ADD(self, item: Union['Clause', Literal]) -> 'Clause':
         """Adds item to the clause attribute if it is not already in clause.
@@ -133,7 +138,10 @@ class Clause(object):
         return new_clause
 
     def remove(self, item: Literal) -> 'Clause':
-        """removes item from clause attribute
+        """Removes item from clause attribute
+        Does not remove the variables of the Literals contained in the clause from any DPLL 
+        variables attributes if the clause is already contained within a DPLL
+
         Returns: new clause same as original but with item removed"""
         if not isinstance(item, Literal):
             raise TypeError("Only Literal object types may be removed from a Clause")
@@ -144,9 +152,9 @@ class Clause(object):
         reduced_clause.set_status()
         return reduced_clause
 
-    def NOT(self) -> set:
-        """Negates the clause and returns the negation as a set
-        Does not change actual clause attribute
+    def NOT(self) -> set[Literal]:
+        """Negates the clause and returns the negation as a set of negated Literals
+        Does not change self
 
         Moves negations inside clause e.g. :
             ~(~a) = a
@@ -158,7 +166,7 @@ class Clause(object):
         return negated_set
     
     def get_clause(self):
-        """Returns: the clause list attribute"""
+        """Returns: the clause attribute"""
         return self.__clause
     
     def is_empty(self) -> bool:
