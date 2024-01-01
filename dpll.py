@@ -22,6 +22,8 @@ class DPLL(object):
         corresponding boolean values; initialized to None, and finalized to their necessary 
         values for the proposition to be solved if it is satisfiable
         proposition: a list of Literal and/or Clause objects
+        original: the original proposition before any dpll disregards or clause removals occur,
+        used to replace the propostion after dpll algorithm takes place
         
     Important methods:
         ADD: adds a given Literal or Clause to the proposition
@@ -194,9 +196,22 @@ class DPLL(object):
             return vars
         else:
             return None
-
+        
     def solve(self) -> str:
-        """Returns: a string representing if the proposition is satisfiable or not
+        """ replaces the resulting proposition with the original proposition after dpll method call
+        
+        Returns: a string representing if the proposition is satisfiable or not
+                'sat' if satisfiable
+                'unsat' if not satisfiable """
+        
+        res = self.dpll()
+        self.__proposition = [copy.deepcopy(cl) for cl in self.__original]
+        return res
+    
+    def dpll(self) -> str:
+        """Implements the DPLL algorithm to find if the proposition is satisfiable or unsatisfiable
+        
+        Returns: a string representing if the proposition is satisfiable or not
                 'sat' if satisfiable
                 'unsat' if not satisfiable"""
         
