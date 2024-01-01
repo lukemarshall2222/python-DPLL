@@ -3,11 +3,17 @@ import copy
 class Literal(object):
     """Literal object in a conjunctive normal form proposition
     
-    Instance Attributes:
+    Attributes:
         variable: a name representing the literal
         sign: represents if the literal is negated (- for negated, + for not negated)
         status: boolean value representing the internal state of the literal
-        calculated_val: boolean value representing the outward state of the literal"""
+        calculated_val: boolean value representing the outward state of the literal
+        
+    Important methods:
+        NOT: negates the Literal by flipping the sign to its opposite
+        set_status: sets the internal status of the Literal, default argument is True
+        get_sign: returns a string representation of the Literal sign
+        get_calculated_val: returns the external state of the Literal"""
     
     def __init__(self, variable: str):
         """args:

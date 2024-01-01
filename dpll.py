@@ -1,7 +1,7 @@
 """
 
 Luke Marshall
-DPLL solver
+DPLL solver object
 """
 from typing import Any, Union, Iterator
 from Literal import Literal
@@ -11,19 +11,27 @@ import copy
 class DPLL(object):
     """DPLL object contains a proposition in conjunctive normal form
     
-    Class Attributes:
+    Properties:
         UNSAT: returned when the proposition is unsatisfiable
         SAT: returned when the propostion is satisfiable
         CHANGED: returned when the unit_clause_hueristic changes the proposition
         UNCHANGED: returned when the unit_clause_hueristic changes the proposition
         
-    Instance Attributes:
+    Attributes:
         variables: a dict of all the variables in every Literal in the proposition and their 
         corresponding boolean values; initialized to None, and finalized to their necessary 
         values for the proposition to be solved if it is satisfiable
-        proposition: a list of Literal and/or Clause objects"""
+        proposition: a list of Literal and/or Clause objects
+        
+    Important methods:
+        ADD: adds a given Literal or Clause to the proposition
+        solve: method used to implement dpll on proposition; returns 'sat' if proposition is 
+        satisfiable, 'unsat' if otherwise
+        solve_for_variables: uses the solve method to solve for the proposition, returns a dict of 
+        the variables and their assigned boolean values to satisfy the proposition if it is satisfiable,'
+        None if otherwise"""
     
-    # Class Attributes:
+    # Properties:
     UNSAT = 'unsat'
     SAT = 'sat'
     CHANGED = 'changed'
@@ -40,6 +48,7 @@ class DPLL(object):
         
         self.__variables = {}
         self.__proposition = []
+        self.__original = []
         for item in args: 
             if isinstance(item, set):
                 # a negated clause produces a set of negated Literals that must individually 
@@ -59,6 +68,7 @@ class DPLL(object):
                     self.__variables[lit.get_variable()] = None
             else:
                 raise TypeError("A DPLL object only accepts Literal and Clause objects in the proposition.")
+        self.__original = [copy.deepcopy(cl) for cl in self.__proposition]
             
     def __str__(self) -> str:
         """Returns: a string representation of the proposition"""
@@ -91,11 +101,13 @@ class DPLL(object):
                 if (lit_var := lit.get_variable()) not in self.__variables:
                     self.__variables[lit_var] = None
                 self.__proposition.append(lit)
+                self.__original.append(copy.deepcopy(lit))
         elif isinstance(item, Literal):
             # Literals may be added directly, to proposition and variables
             if (item_var := item.get_variable()) not in self.__variables:
                 self.__variables[item_var] = None
             self.__proposition.append(item)
+            self.__original.append(copy.deepcopy(item))
         elif isinstance(item, Clause):
             # Clauses may be added directly, but the Literals they contains must be added to the 
             # variables individually
@@ -105,6 +117,7 @@ class DPLL(object):
                 if (lit_var := lit.get_variable()) not in self.__variables:
                     self.__variables[lit_var] = None
             self.__proposition.append(item) # add the clause directly to the proposition
+            self.__original.append(copy.deepcopy(item))
         else:
             raise TypeError("DPLL proposition can only be made up of Literal and Clause objects.")
         

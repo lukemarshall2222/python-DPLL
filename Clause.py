@@ -9,15 +9,17 @@ from Literal import Literal
 class Clause(object):
     """Clause object in a conjunctive normal form proposition 
     
-    Instance Attributes:
+    Attributes:
         clause: a list of Literal objects
         status: boolean representing the calculated value of the clause
         based on the calculated values of the individual 
         
-    Key methods:
-       set_status: sets the status attribute based on the truthiness of the Literals contained 
+    Important methods:
+        set_status: sets the status attribute based on the truthiness of the Literals contained 
         in clause
-          """
+        ADD: adds a single Literal or Clause to clause 
+        remove: removes a single Literal from clause
+        NOT: returns a set containig a negation each of the Literal in clause"""
     
     def __init__(self, *args: list[Union['Clause', Literal]]):
         """Initializes the Clause object"""
