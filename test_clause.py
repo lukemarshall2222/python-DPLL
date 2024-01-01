@@ -46,11 +46,11 @@ def test_clause_init_status():
     cl2 = Clause(a, b)
     assert cl2._Clause__tautology_check() == False
     assert cl2.get_status() == None
-    c.set_status()
+    c.set_internal_status()
     cl3 = Clause(c, d)
     assert cl3.get_status() == True
     c = c.NOT()
-    d.set_status(False)
+    d.set_internal_status(False)
     cl4 = Clause(c, d)
     assert cl4.get_status() == False
 
@@ -89,11 +89,11 @@ def test_clause_add_status():
     cl2 = Clause()
     cl2.ADD(b)
     cl2.ADD(c)
-    b.set_status()
-    c.set_status()
+    b.set_internal_status()
+    c.set_internal_status()
     assert cl2.get_status() == True
-    b.set_status(False)
-    c.set_status(False)
+    b.set_internal_status(False)
+    c.set_internal_status(False)
     assert cl2.get_status() == False
     cl3 = Clause(a, d)
     cl2.ADD(cl3)
@@ -130,7 +130,7 @@ def test_clause_remove_status():
     cl = cl.remove(a2)
     assert cl.get_status() == None
     cl = cl.remove(a)
-    a.set_status()
+    a.set_internal_status()
     cl.ADD(a)
     assert cl.get_status() == True
     cl = cl.remove(a)
@@ -138,9 +138,9 @@ def test_clause_remove_status():
     cl = cl.remove(b)
     cl = cl.remove(c)
     cl = cl.remove(d)
-    assert cl.get_status() == None
-    b.set_status(False)
-    c.set_status(False)
+    assert cl.get_status() == True
+    b.set_internal_status(False)
+    c.set_internal_status(False)
     cl.ADD(b)
     cl.ADD(c)
     assert cl.get_status() == False

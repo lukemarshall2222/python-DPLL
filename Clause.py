@@ -11,15 +11,8 @@ class Clause(object):
     
     Attributes:
         clause: a list of Literal objects
-        status: boolean representing the calculated value of the clause
-        based on the calculated values of the individual 
-        
-    Important methods:
-        set_status: sets the status attribute based on the truthiness of the Literals contained 
-        in clause
-        ADD: adds a single Literal or Clause to clause 
-        remove: removes a single Literal from clause
-        NOT: returns a set containig a negation each of the Literal in clause"""
+        status: boolean representing the external status of the clause
+        based on the external statuses of the individual Literals it contains"""
     
     def __init__(self, *args: list[Union['Clause', Literal]]):
         """Initializes the Clause object"""
@@ -56,14 +49,14 @@ class Clause(object):
         """checks the external truth value of Literals in the clause attribute to calculate and
         set the status attribute"""
         if self.is_empty():
-            self.__status = None
+            self.__status = True
         elif self.__tautology_check():
             self.__status = True
         else:
             none_in = true_in = False
             for lit in self.__clause:
                 assert isinstance(lit, Literal)
-                lit_val = lit.get_calculated_val()
+                lit_val = lit.get_external_status()
                 if lit_val:
                     true_in = True
                 elif lit_val == None:

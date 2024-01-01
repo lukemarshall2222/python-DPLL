@@ -3,7 +3,7 @@
 Luke Marshall
 DPLL solver object
 """
-from typing import Any, Union, Iterator
+from typing import Union, Iterator
 from Literal import Literal
 from Clause import Clause
 import copy
@@ -224,7 +224,7 @@ class DPLL(object):
         values = set()
         for clause in self.__proposition:
             if isinstance(clause, Literal):
-                values.add(clause.get_calculated_val())
+                values.add(clause.get_external_status())
             elif isinstance(clause, Clause):
                 values.add(clause.get_status())
         if (False in values):
@@ -292,10 +292,10 @@ class DPLL(object):
         to_disregard = []
         for i, item in enumerate(self):
             if isinstance(item, Literal):
-                if item.get_calculated_val():
+                if item.get_external_status():
                     to_disregard.append(item)
             elif isinstance(item, Clause):
-                if item.get_status() or item.is_empty():
+                if item.get_status():
                     to_disregard.append(item)
                     continue
                 elif len(item) == 1:
@@ -303,7 +303,7 @@ class DPLL(object):
                     self.ADD(item[0])
                     continue
                 for lit in item:
-                    if lit.get_calculated_val() == False:
+                    if lit.get_external_status() == False:
                         self.__proposition[i] = item.remove(lit)
             else:
                 raise TypeError("Proposition may only contain Literals and Clauses")
@@ -311,7 +311,7 @@ class DPLL(object):
             self.__disregard(item)
 
     def unit_clause_heuristic(self) -> str:
-            '''Sets the value of any unit clauses so their external calculated value is True.
+            '''Sets the value of any unit clauses so their external external status is True.
             Checks the proposition for any sign contradictions on the unit clauses.
             Removes the unit clauses. Removes literals from clauses if they have a negated sign
             but the same variable as a unit clause; removes the clause from the proposition 
@@ -335,7 +335,7 @@ class DPLL(object):
                     else:
                         uclauses[lit_var] = lit_sign
                         self.__variables[lit_var] = True if lit_sign == 'pos' else False
-                    item.set_status(self.__variables[lit_var])
+                    item.set_internal_status(self.__variables[lit_var])
             self.simplify()
 
             for clause in self:
@@ -345,7 +345,7 @@ class DPLL(object):
                     for lit in clause:
                         assert isinstance(lit, Literal), "Non-Literal found within Clause"
                         if (lit_var := lit.get_variable()) in uclauses:
-                            lit.set_status(self.__variables[lit_var])
+                            lit.set_internal_status(self.__variables[lit_var])
             self.simplify()
             return DPLL.CHANGED if len(uclauses) else DPLL.UNCHANGED
 
@@ -383,7 +383,7 @@ class DPLL(object):
                 if (lit_var := item.get_variable()) in uniform_vars:
                     lit_sign = lit.get_sign()
                     self.__variables[lit_var] = True if lit_sign == 'pos' else False
-                    lit.set_status(self.__variables[lit_var])
+                    lit.set_internal_status(self.__variables[lit_var])
                     changed = True
             elif isinstance(item, Clause):
                 for lit in item:
@@ -391,7 +391,7 @@ class DPLL(object):
                     if (lit_var := lit.get_variable()) in uniform_vars:
                         lit_sign = lit.get_sign()
                         self.__variables[lit_var] = True if lit_sign == 'pos' else False
-                        lit.set_status(self.__variables[lit_var])
+                        lit.set_internal_status(self.__variables[lit_var])
                         changed = True
         self.simplify()
         return changed
@@ -403,7 +403,7 @@ class DPLL(object):
             for lit in clause:
                 assert isinstance(lit, Literal)
                 if lit.get_variable() == var:
-                    lit.set_status(val)
+                    lit.set_internal_status(val)
 
 
 

@@ -12,8 +12,8 @@ def test_literal_init():
     a = Literal('a')
     assert a.get_variable() == 'a'
     assert a.get_sign() == 'pos'
-    assert a.get_status() is None
-    assert a.get_calculated_val() is None
+    assert a.get_internal_status() is None
+    assert a.get_external_status() is None
     with pytest.raises(TypeError):
         b = Literal(7)
 
@@ -48,27 +48,27 @@ def test_get_sign():
     assert b.get_sign() == 'neg'
 
 def test_literal_status_and_val():
-    # test literal set_status, get_status, set_calculated_val, and get_calculated_val methods
+    # test literal set_internal_status, get_internal_status, set_external_status, and get_external_status methods
     a = Literal('a')
-    a.set_status()
+    a.set_internal_status()
     print(a)
     assert a.get_sign() == 'pos'
-    assert a.get_status() == True
-    assert a.get_calculated_val() == True
+    assert a.get_internal_status() == True
+    assert a.get_external_status() == True
     b = a.NOT()
     print(b)
     assert b.get_sign() == 'neg'
-    assert b.get_status() == True
-    assert b.get_calculated_val() == False
+    assert b.get_internal_status() == True
+    assert b.get_external_status() == False
     c = b.NOT()
-    c.set_status(False)
+    c.set_internal_status(False)
     assert c.get_sign() == 'pos'
-    assert c.get_status() == False
-    assert c.get_calculated_val() == False
+    assert c.get_internal_status() == False
+    assert c.get_external_status() == False
     d = c.NOT()
     assert d.get_sign() == 'neg'
-    assert d.get_status() == False
-    assert d.get_calculated_val() == True
+    assert d.get_internal_status() == False
+    assert d.get_external_status() == True
 
 def test_literal_eq():
     # test the Literal eq method
@@ -94,8 +94,8 @@ def test_literal_copy():
     a_cp = copy.copy(a)
     assert a.get_variable() == a_cp.get_variable()
     assert a.get_sign() == a_cp.get_sign()
-    assert a.get_status() == a_cp.get_status()
-    assert a.get_calculated_val() == a_cp.get_calculated_val()
+    assert a.get_internal_status() == a_cp.get_internal_status()
+    assert a.get_external_status() == a_cp.get_external_status()
     a = a.NOT()
     assert a.get_sign() != a_cp.get_sign()
 
@@ -103,7 +103,7 @@ def test_literal_bool():
     """test literal bool representation"""
     a = Literal('a')
     assert not bool(a)
-    a.set_status()
+    a.set_internal_status()
     assert bool(a)
 
 
