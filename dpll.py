@@ -14,8 +14,8 @@ class DPLL(object):
     Properties:
         UNSAT: returned when the proposition is unsatisfiable
         SAT: returned when the propostion is satisfiable
-        CHANGED: returned when the unit_clause_hueristic changes the proposition
-        UNCHANGED: returned when the unit_clause_hueristic changes the proposition
+        CHANGED: returned when the unit_clause_heuristic changes the proposition
+        UNCHANGED: returned when the unit_clause_heuristic changes the proposition
         
     Attributes:
         variables: a dict of all the variables in every Literal in the proposition and their 
@@ -247,9 +247,9 @@ class DPLL(object):
         elif res == DPLL.CHANGED:
             return self.solve()
         
-        # apply pure clause hueristic until the proposition did not change with most recent call 
+        # apply pure clause heuristic until the proposition did not change with most recent call 
         # to PCH
-        res2 = self.pure_clause_hueristic()
+        res2 = self.pure_clause_heuristic()
         if res2:
             return self.solve() 
         
@@ -349,7 +349,7 @@ class DPLL(object):
             self.simplify()
             return DPLL.CHANGED if len(uclauses) else DPLL.UNCHANGED
 
-    def pure_clause_hueristic(self) -> bool:
+    def pure_clause_heuristic(self) -> bool:
         '''Sets the value of any pure clauses so that their external value is True. Removes all 
          caluses containig those clauses
          
