@@ -28,8 +28,8 @@ The attributes consist of two statuses, a sign, and a variable:
  #### Important Methods       
 - The status of a **Literal** may be set using the `set_internal_status()` method, with the default argument being `True`. 
 - The sign of a **Literal** may be flipped using the `NOT()` method which serves the effect of negating the **Literal**. 
-    -- The `NOT()` method produces a new **Literal**, a copy which has the same variable and internal state, but with opposite sign. 
-    -- This is to avoid changing a proposition after the **Literal** has been added to it. 
+    - The `NOT()` method produces a new **Literal**, a copy which has the same variable and internal state, but with opposite sign. 
+    - This is to avoid changing a proposition after the **Literal** has been added to it. 
 - The external state of the **Literal** is calculated automatically whenever changes are made to either the internal state or the sign and when the external state is accessed through the `get_external_status()` method.
 
 ### Clauses
