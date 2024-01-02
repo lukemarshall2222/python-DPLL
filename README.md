@@ -12,18 +12,18 @@ A **Literal** object is the most basic foundational tool of the solver. Each con
 #### Attributes
 The attributes consist of two statuses, a sign, and a variable:
 - The variable is used to represent the **Literal**s which are all of a kind.
--- The variable of a **Literal** is initialized with the object; it is recommended that the object be assigned to a name that is the same as its variable, e.g.
+    - The variable of a **Literal** is initialized with the object; it is recommended that the object be assigned to a name that is the same as its variable, e.g.
                 `a = Literal('a')`
                 `b = Literal('b')`
                 `foo = Literal('foo')` etc. 
 - The sign is used to signify if a **Literal** has been negated. 
 - The two statuses of a **Literal** are:
--- an internal status stored as the `internal_status` attribute, 
---- The internal status of all **Literal**s with a given variable are the same throughout a proposition, but their external statuses may differ.
--- an external status stored as the `external_status` attribute;
---- The external status of a **Literal** is calculated using the `sign` and `internal_status` attributes.
---- If the sign is positive, the external status of the **Literal** is the same as the internal status. 
--- both statuses are represented by boolean values or `None`. 
+    - an internal status stored as the `internal_status` attribute 
+        - The internal status of all **Literal**s with a given variable are the same throughout a proposition, but their external statuses may differ.
+    - an external status stored as the `external_status` attribute
+        - The external status of a **Literal** is calculated using the `sign` and `internal_status` attributes.
+        - If the sign is positive, the external status of the **Literal** is the same as the internal status. 
+    - both statuses are represented by boolean values or `None` 
 
  #### Important Methods       
 - The status of a **Literal** may be set using the `set_internal_status()` method, with the default argument being `True`. 
