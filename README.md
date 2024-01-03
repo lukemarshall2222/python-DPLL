@@ -3,6 +3,48 @@
 ## Purpose
 The purpose of this project is to implement a DPLL algorithm in a **DPLL** solver object. The algorithm is used to find if a given proposition is satisfiable or unsatisfiable. See [DPLL.md](https://github.com/lukemarshall2222/python-DPLL/blob/main/DPLL.md) for more details on the DPLL algorithm and propositions.
 
+## Usage
+In order to use the solver you must first translate a proposition into conjunctive normal form, see [DPLL.md](https://github.com/lukemarshall2222/python-DPLL/blob/main/DPLL.md). 
+ proposition in conjunctive normal form:  (A ∨ ¬B ∨ C) ∧ (¬A ∨ D) ∧ (B ∨ ¬C ∨ E) ∧ (¬D ∨ ¬E)
+ 1. Translate the proposition into **Literal**, **Clause**, and **DPLL** objects
+    - start with defining all the Literals and their negations:
+    ```python
+    a = Literal('a')
+    b = Literal('b')
+    c = Literal('c')
+    d = Literal('d')
+    e = Literal('e')
+    a_neg = a.NOT()
+    b_neg = b.NOT()
+    c_neg = c.NOT()
+    d_neg = d.NOT()
+    e_neg = e.NOT()
+    ```
+    - use the Literals to create the Clauses:
+    ```python
+    cl = Clause(a, b_neg, c)
+    cl2 = Clause(a_neg, d)
+    cl3 = Clause(b, c_neg, e)
+    cl4 = Clause(d_neg, e_neg)
+    ```
+    - use the Literals and Clauses to make the proposition inside a DPLL object:
+    ```python
+    dpll = DPLL(cl, cl2, cl3, cl4)
+    ```
+2. Use DPLL methods to solve and solve for variables:
+    - Solve result only:
+    ```python
+    dpll.solve()
+    'sat'
+    ```
+        - will return 'unsat' if the proposition is unsatisfiable
+    - Solve variables and result:
+    ```python
+    dpll.solve_for_variables()
+    { 'a': False, 'b': False, 'c': True, 'd': False, 'e': True }
+    ```
+        - will return `None` if the proposition is unsatisfiable
+
 ## Implementation
 The solver involves the usage of three custom objects: **Literal**, **Clause**, and **DPLL**. Each has its own attributes and methods that contribute to the solver being able to process the objects and reach a conclusion.
 
@@ -77,51 +119,6 @@ The three attributes are:
         - See [DPLL.md](https://github.com/lukemarshall2222/python-DPLL/blob/main/DPLL.md) for more in-depth explanation of these processes. 
     - The value assignments are tracked using the `variables` attribute which may be returned with the proper assignments if the result of the `solve()` call is 'sat', using the `solve_for_variables()` method; otherwise the result of this method is `None`. 
 - The **DPLL** class also contains many of the basic list methods such as `contains`, `len`, and an iterator through the `clause` attribute. 
-
-## Usage
-In order to use the solver you must first translate a proposition into conjunctive normal form, see [DPLL.md](https://github.com/lukemarshall2222/python-DPLL/blob/main/DPLL.md). 
- proposition in conjunctive normal form:  (A ∨ ¬B ∨ C) ∧ (¬A ∨ D) ∧ (B ∨ ¬C ∨ E) ∧ (¬D ∨ ¬E)
- 1. Translate the proposition into **Literal**, **Clause**, and **DPLL** objects
-    - start with defining all the Literals and their negations:
-    ```python
-    a = Literal('a')
-    b = Literal('b')
-    c = Literal('c')
-    d = Literal('d')
-    e = Literal('e')
-    a_neg = a.NOT()
-    b_neg = b.NOT()
-    c_neg = c.NOT()
-    d_neg = d.NOT()
-    e_neg = e.NOT()
-    ```
-    - use the Literals to create the Clauses:
-    ```python
-    cl = Clause(a, b_neg, c)
-    cl2 = Clause(a_neg, d)
-    cl3 = Clause(b, c_neg, e)
-    cl4 = Clause(d_neg, e_neg)
-    ```
-    - use the Literals and Clauses to make the proposition inside a DPLL object:
-    ```python
-    dpll = DPLL(cl, cl2, cl3, cl4)
-    ```
-2. Use DPLL methods to solve and solve for variables:
-    - Solve result only:
-    ```python
-    dpll.solve()
-    'sat'
-    ```
-        - will return 'unsat' if the proposition is unsatisfiable
-    - Solve variables and result:
-    ```python
-    dpll.solve_for_variables()
-    { 'a': False, 'b': False, 'c': True, 'd': False, 'e': True }
-    ```
-        - will return `None` if the proposition is unsatisfiable
-
-
-
 
 ### Author
 Luke Marshall
