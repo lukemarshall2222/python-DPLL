@@ -7,7 +7,8 @@ from Literal import Literal
 
 
 class Clause(object):
-    """Clause object in a conjunctive normal form proposition 
+    """Clause object in a conjunctive normal form proposition. Secondary element of a proposition,
+    contains a number of Literals. Represents a list of disjunct Literals.
     
     Attributes:
         clause: a list of Literal objects
@@ -15,7 +16,15 @@ class Clause(object):
         based on the external statuses of the individual Literals it contains"""
     
     def __init__(self, *args: list[Union['Clause', Literal]]):
-        """Initializes the Clause object"""
+        """Constructor method for the Clause object
+        
+        Examples:
+        a = Literal('a')
+        b = Literal('b')
+        c = Literal('c')
+        cl = Clause(a, b)
+        cl2 = Clause(cl, c)
+        """
         self.__clause = []
         self.__status = None # based on the statuses of the Literals it contains
         for arg in args:
@@ -38,16 +47,49 @@ class Clause(object):
         self.__filter_duplicates()
 
     def __str__(self) -> str:
-        """Returns: string representation of the Literals in clause attribute"""
+        """Returns: string representation of the Literals in clause attribute
+        
+        Example:
+        >>> a = Literal('a')
+        >>> b = Literal('b')
+        >>> cl = Clause(a, b)
+        >>> print(cl)
+        "['+a', '+b']"
+        >>> str(cl)
+        "['+a', '+b']"
+        """
         return f"{[str(lit) for lit in self.__clause]}"
     
     def __repr__(self):
-        """Returns: string representation of the Literals in clause attribute"""
+        """Returns: string representation of the Literals in clause attribute
+        
+        Example:
+        >>> a = Literal('a')
+        >>> b = Literal('b')
+        >>> cl = Clause(a, b)
+        >>> repr(cl)
+        "['+a', '+b']"
+        """
         return f"{[repr(lit) for lit in self.__clause]}"
 
     def set_status(self):
         """checks the external truth value of Literals in the clause attribute to calculate and
-        set the status attribute"""
+        set the status attribute
+        
+        Example:
+        >>> a = Literal('a')
+        >>> a.set_internal_status(False)
+        >>> b = Literal('b')
+        >>> b.set_status()
+        >>> cl = Clause(a)
+        >>> cl.set_status()
+        >>> cl.__status == False
+        True
+        >>> cl.ADD(b)
+        >>> cl.set_status()
+        >>> cl.__status == True
+        True
+        """
         if self.is_empty():
             self.__status = True
         elif self.__tautology_check():
@@ -71,7 +113,14 @@ class Clause(object):
 
     def __tautology_check(self) -> bool:
         """Returns: a boolean representing if the clause attribute contains any
-        Literals with the same variables and opposite signs"""
+        Literals with the same variables and opposite signs
+        
+        >>> a = Literal('a')
+        >>> a2 = a.NOT()
+        >>> cl = Clause(a, a2)
+        >>> cl.__tautology_check()
+        True
+        """
         var_dict = {} # Literal variable : Literal sign
         for lit in self.__clause:
             assert isinstance(lit, Literal)
@@ -91,17 +140,42 @@ class Clause(object):
                          not (obj in seen or seen.add(obj))]
 
     def get_status(self) -> bool:
-        """Returns: a boolean represening the status of the clause"""
+        """Returns: a boolean representing the status of the clause after setting it
+        
+        Example:
+        >>> a = Literal('a')
+        >>> a.set_internal_status(False)
+        >>> b = Literal('b')
+        >>> b.set_status()
+        >>> cl = Clause(a)
+        >>> cl.set_status()
+        >>> cl.get_status() 
+        False
+        >>> cl.ADD(b)
+        >>> cl.get_status()
+        True
+        """
         self.set_status()
         return self.__status
 
     def ADD(self, item: Union['Clause', Literal]) -> 'Clause':
-        """Adds item to the clause attribute if it is not already in clause.
-        sets the status attribute to True if the variable is already in the clause with the opposite sign
+        """Adds item to the clause attribute if it is not a duplicate.
+        Sets the status attribute to True if the variable in any of the added Literals is already
+        in the clause in an opposite signed Literal.
         
-        Raises: 
-            AttributeError if contradiction is found
-            TypeError if wrong type given as item"""
+        Raises: TypeError if wrong type given as item
+        
+        Example:
+        >>> a = Literal('a')
+        >>> b = Literal('b')
+        >>> c = Literal('c')
+        >>> cl = Clause(a, b)
+        >>> cl2 = Clause()
+        >>> cl2.ADD(c)
+        >>> cl2.ADD(cl)
+        >>> print(cl2)
+        "['+a', '+b', '+c']"
+        """
         new_clause = copy.copy(self)
         if isinstance(item, Literal):
             matched = False
@@ -137,7 +211,18 @@ class Clause(object):
         Does not remove the variables of the Literals contained in the clause from any DPLL 
         variables attributes if the clause is already contained within a DPLL
 
-        Returns: new clause same as original but with item removed"""
+        Returns: new clause same as original but with item removed
+        
+        Example:
+        >>> a = Literal('a')
+        >>> b = Literal('b')
+        >>> cl = Clause(a, b)
+        >>> cl2 = cl.remove(b)
+        >>> print(cl)
+        "['+a', '+b']"
+        >>> print(cl2)
+        "['+a']"
+        """
         if not isinstance(item, Literal):
             raise TypeError("Only Literal object types may be removed from a Clause")
         if item not in self:
@@ -153,7 +238,18 @@ class Clause(object):
 
         Moves negations inside clause e.g. :
             ~(~a) = a
-            ~(a v b) = ~a ∧ ~b"""
+            ~(a v b) = ~a ∧ ~b
+            
+        Example:
+        >>> a = Literal('a')
+        >>> b = Literal('b')
+        >>> cl = Clause(a, b)
+        >>> cl2 = cl.NOT()
+        >>> print(cl)
+        "['+a', '+b']"
+        >>> print(cl2)
+        {'-a', '-b'}
+        """
         negated = copy.deepcopy(self)
         negated_set = set()
         for lit in negated:
@@ -161,15 +257,44 @@ class Clause(object):
         return negated_set
     
     def get_clause(self):
-        """Returns: the clause attribute"""
+        """Returns: the clause attribute
+        
+        Example:
+        >>> a = Literal('a')
+        >>> b = Literal('b')
+        >>> cl = Clause(a, b)
+        >>> cl.get_clause:
+        ['+a', '+b']
+        """
         return self.__clause
     
     def is_empty(self) -> bool:
-        """Returns: boolean representing if clause attibute length is 0"""
+        """Returns: boolean representing if clause attibute length is 0
+        
+        Example:
+        >>> cl = Clause()
+        >>> cl.is_empty()
+        True
+
+        >>> a = Literal('a')
+        >>> cl.ADD(a)
+        >>> cl.is_empty()
+        False
+        """
         return not len(self.__clause)
     
     def __len__(self) -> int:
-        """Returns: int number of items in clause attribute"""
+        """Returns: int number of items in clause attribute
+        
+        Example:
+        >>> a = Literal('a')
+        >>> b = Literal('b')
+        >>> c = Literal('c')
+        >>> cl = Clause(a, b)
+        >>> cl2 = Clause(c, cl)
+        >>> len(cl2)
+        3
+        """
         return len(self.__clause)
     
     def __iter__(self) -> Iterator[Literal]:
@@ -184,32 +309,33 @@ class Clause(object):
         """Implements a shallow copy of the Clause
         Returns: a shallow copy of the Clause"""
         cp = Clause()
-        cp._Clause__clause = self.__clause.copy()
+        cp.__clause = self.__clause.copy()
         cp.set_status
         return cp
     
-    def __deepcopy__(self, memo) -> 'Clause':
-        """Implements a deep copy of the Clause
-        Returns: a deep copy of the Clause"""
+    def __deepcopy__(self, memo: dict) -> 'Clause':
+        """Implements a deep copy of self
+        Returns: a deep copy of self"""
         cp = Clause()
         memo[id(self)] = cp
-        cp._Clause__clause = [copy.deepcopy(lit, memo) for lit in self.__clause]
+        cp.__clause = [copy.deepcopy(lit, memo) for lit in self.__clause]
         cp.set_status()
         return cp
     
     def __eq__(self, other: 'Clause') -> bool:
-        "Returns: a boolean representing if a List or another Clause contains the same "
+        """Returns: a boolean representing if a List or another Clause contains the same 
+        literals as are in clause"""
         same = False
         if not isinstance(other, (Clause, list)):
             return False
         elif isinstance(other, Clause):
-            same = True if self.__clause == other._Clause__clause else same
+            same = True if self.__clause == other.__clause else same
         else:
             same = True if self.__clause == other else same
         return same
     
-    def __contains__(self, item) -> bool:
-        """Returns: a boolean representing if item is in the clause attribute"""
+    def __contains__(self, item: Literal) -> bool:
+        """Returns: a boolean representing if item (Literal) is in the clause attribute"""
         if not isinstance(item, Literal):
             raise TypeError("A Clause cannot contain any non-Literal objects")
         return item in self.__clause

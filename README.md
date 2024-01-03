@@ -38,7 +38,7 @@ A **Clause** object is a secondary list tool of the solver. Each **Clause** cons
 #### Clause Attributes
 The two attributes are:
 - a list of **Literal**s called `clause` 
-- a bolean value called `status` 
+- a boolean value called `status` 
     - `status` is contributed to by the external statuses of each of the **Literal**s contained within the 'clause' attribute.
     - It is set each time new **Literal**s are introduced, and whenever it is accessed through the `get_status()` method. 
 

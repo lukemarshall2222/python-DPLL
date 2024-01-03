@@ -1,7 +1,8 @@
 import copy
 
 class Literal(object):
-    """Literal object in a conjunctive normal form proposition
+    """Literal object in a conjunctive normal form proposition. Represents the basic unit of a 
+    proposition: a variable and its state.
     
     Attributes:
         variable: a name representing the literal
@@ -40,6 +41,7 @@ class Literal(object):
     
     def __repr__(self):
         """Returns: string representation of the Literal variable and its sign
+
         Examples:
         >>> a = Literal('a')
         >>> repr(a)
@@ -86,7 +88,7 @@ class Literal(object):
     def __flip_sign(self):
         """Makes the sign of the Literal the opposite of what it is set to before being called.
         
-        e.g.
+        i.e.
           if the Literal sign is '+', it will flip to '-'
           if the Literal sign is '-', it will flip to '+'
           """
@@ -102,7 +104,7 @@ class Literal(object):
 
         >>> a2 = a.NOT()
         >>> a2.get_sign()
-        'neg
+        'neg'
         """
         return 'pos' if self.__sign == '+' else 'neg'
     

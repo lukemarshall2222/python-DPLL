@@ -29,7 +29,7 @@ values are true. If a literal is not negated, its variable is given the value of
 
 ### Pure Clause heuristic
 The pure clause heuristic is used to find literals with a given variable that have all
-either been negated or are all not negated throughout the entire proposition, the same within every clause. The value of the variable is set such that the external value for every literal with that variable has an external value of true, allowing each clause containing one of them to be removed from the proposition. The UHC should precede each use of this heuristic.
+either been negated or are all not negated throughout the entire proposition, the same within every clause. The value of the variable is set such that the external value for every literal with that variable has an external value of true, allowing each clause containing one of them to be removed from the proposition.
 
 ### Guess and Check
 If neither of the logical heuristics may be used (e.g. in the case of no unit or pure
