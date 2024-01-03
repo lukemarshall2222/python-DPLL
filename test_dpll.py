@@ -402,3 +402,21 @@ def test_solve_for_variables_2():
     dpll = DPLL(a, a_neg)
     vars = dpll.solve_for_variables()
     assert vars is None
+
+def solve_example():
+    a = Literal('a')
+    b = Literal('b')
+    c = Literal('c')
+    d = Literal('d')
+    e = Literal('e')
+    a_neg = a.NOT()
+    b_neg = b.NOT()
+    c_neg = c.NOT()
+    d_neg = d.NOT()
+    e_neg = e.NOT()
+    cl = Clause(a, b_neg, c)
+    cl2 = Clause(a_neg, d)
+    cl3 = Clause(b, c_neg, e)
+    cl4 = Clause(d_neg, e_neg)
+    dpll = DPLL(cl, cl2, cl3, cl4)
+    vars = dpll.solve_for_variables()
