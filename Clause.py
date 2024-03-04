@@ -91,7 +91,7 @@ class Clause(object):
         True
         """
         if self.is_empty():
-            self.__status = True
+            self.__status = False
         elif self.__tautology_check():
             self.__status = True
         else:

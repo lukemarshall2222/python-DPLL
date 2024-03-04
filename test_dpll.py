@@ -130,20 +130,20 @@ def test_dpll_is_empty():
 
 def test_dpll_solve_empty():
     dpll = DPLL()
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_dpll_solve_most_basic():
     a = Literal('a')
     dpll = DPLL(a)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_dpll_solve_basic_contradiction():
     a = Literal('a')
     a_neg = a.NOT()
     dpll = DPLL(a, a_neg)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'unsat'
 
 def test_dpll_solve_middling_contradiction():
@@ -151,7 +151,7 @@ def test_dpll_solve_middling_contradiction():
     a_neg = a.NOT()
     cl = Clause(a_neg)
     dpll = DPLL(a, cl)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'unsat'
 
 def test_basic_unit_clause_solve():
@@ -163,7 +163,7 @@ def test_basic_unit_clause_solve():
     e = Literal('e')
     e_neg = e.NOT()
     dpll = DPLL(a, b, c_neg, d, e_neg)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_basic_pure_clause_solve():
@@ -176,7 +176,7 @@ def test_basic_pure_clause_solve():
     cl = Clause(a, c, d)
     cl2 = Clause(a2, c_neg, e)
     dpll = DPLL(cl, cl2)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_solve_middling_prop():
@@ -195,7 +195,7 @@ def test_solve_middling_prop():
     cl3 = Clause(b, c_neg, e)
     cl4 = Clause(e_neg, d_neg)
     dpll = DPLL(cl, cl2, cl3, cl4)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_solve_middling_prop_2():
@@ -216,7 +216,7 @@ def test_solve_middling_prop_2():
     cl3 = Clause(b, c_neg, f_neg)
     cl4 = Clause(e, d_neg, f)
     dpll = DPLL(cl, d, cl2, cl3, cl4, e_neg)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_solve_middling_prop_3():
@@ -235,7 +235,7 @@ def test_solve_middling_prop_3():
     cl3 = Clause(d_neg, e)
     cl4 = Clause(d, e_neg)
     dpll = DPLL(cl, cl2, c, cl3, cl4, a_neg, b)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'unsat'
 
 def test_solve_hard_prop():
@@ -259,7 +259,7 @@ def test_solve_hard_prop():
     cl6 = Clause(c, g)
     cl7 = Clause(d, b_neg)
     dpll = DPLL(cl, cl2, cl3_neg, cl4, cl5, cl6, cl7)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_solve_hard_prop_2():
@@ -287,7 +287,7 @@ def test_solve_hard_prop_2():
     cl6 = Clause(d, h_neg, g, a)
     cl7 = Clause(c_neg, f, e_neg, h)
     dpll = DPLL(cl, cl2, cl3, cl4, cl5, cl6, cl7)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     print(dpll.get_variables())
     assert sat == 'sat'
 
@@ -321,7 +321,7 @@ def test_solve_hard_prop_3():
     cl11 = Clause(e, g_neg, h_neg, a)
     cl12 = Clause(c_neg, f, b_neg, e_neg)
     dpll = DPLL(cl, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10, cl11, cl12, a_neg, b, c_neg, d)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'unsat'
 
 def test_basic_solve_by_tautology():
@@ -329,7 +329,7 @@ def test_basic_solve_by_tautology():
     a_neg = a.NOT()
     cl = Clause(a, a_neg)
     dpll = DPLL(cl)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_middling_solve_by_tautology():
@@ -340,7 +340,7 @@ def test_middling_solve_by_tautology():
     cl = Clause(a, a_neg)
     cl2 = Clause(b, b_neg)
     dpll = DPLL(cl, cl2)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'sat'
 
 def test_middling_solve_unsat():
@@ -358,7 +358,7 @@ def test_middling_solve_unsat():
     cl6 = Clause(a_neg, b)
     cl7 = Clause(a, b_neg)
     dpll = DPLL(cl, cl2, cl3, cl4, cl5, cl6, cl7)
-    sat = dpll.solve()
+    sat = dpll.solve_satisfiability()
     assert sat == 'unsat'
 
 def test_solve_for_variables():
@@ -393,8 +393,9 @@ def test_solve_for_variables():
     dpll = DPLL(cl, cl2, cl3, cl4, cl5, cl6, cl7, cl8, cl9, cl10, cl11, cl12, a_neg, b, c_neg)
     vars = dpll.solve_for_variables()
     assert isinstance(vars, dict)
-    for var in vars:
-        assert vars[var] in (True, False, 'either')
+    res = dpll.solve_satisfiability()
+    assert res == 'sat'
+    
 
 def test_solve_for_variables_2():
     a = Literal('a')
@@ -420,3 +421,36 @@ def solve_example():
     cl4 = Clause(d_neg, e_neg)
     dpll = DPLL(cl, cl2, cl3, cl4)
     vars = dpll.solve_for_variables()
+    assert vars is None
+
+def  test_init_conds_1():
+    a = Literal('a')
+    dpll = DPLL(a)
+    dpll.set_initial_conditions(a=False)
+    vars = dpll.solve_for_variables()
+    assert vars is None
+    vars = dpll.solve_for_variables()
+    assert vars is None
+
+
+def test_init_conds_2():
+    a = Literal('a')
+    b = Literal('b')
+    cl = Clause(a, b)
+    dpll = DPLL(cl)
+    dpll.set_initial_conditions(a=False, b=False)
+    vars = dpll.solve_for_variables()
+    assert vars is None
+
+def test_init_conds_3():
+    a = Literal('a')
+    b = Literal('b')
+    cl = Clause(a, b)
+    dpll = DPLL()
+    dpll.ADD(b.NOT())
+    dpll.ADD(cl)
+    dpll.set_initial_conditions(a=True, b=False)
+    vars = dpll.solve_for_variables()
+    assert len(vars)
+
+

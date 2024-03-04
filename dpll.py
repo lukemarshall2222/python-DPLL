@@ -32,8 +32,8 @@ class DPLL(object):
     # Properties:
     UNSAT = 'unsat'
     SAT = 'sat'
-    CHANGED = 'changed'
-    UNCHANGED = 'unchanged'
+    CHANGED = True
+    UNCHANGED = False
 
     def __init__(self, *args: Union[Literal, Clause, set[Literal]]):
         """Constructor function produces the proposition for the DPLL by appropriately
@@ -57,6 +57,7 @@ class DPLL(object):
         self.__variables = {}
         self.__proposition = []
         self.__original = []
+        self.__initial_conditions = {}
         for item in args: 
             if isinstance(item, set):
                 # a negated clause produces a set of negated Literals that must individually 
@@ -76,7 +77,7 @@ class DPLL(object):
                     self.__variables[lit.get_variable()] = None
             else:
                 raise TypeError("A DPLL object only accepts Literal and Clause objects in the proposition.")
-        self.__original = [copy.deepcopy(cl) for cl in self.__proposition]
+        self.__original = copy.deepcopy(self.__proposition)
             
     def __str__(self) -> str:
         """Returns: a string representation of the proposition
@@ -162,22 +163,28 @@ class DPLL(object):
                                     Literal and Clause objects.""")
                 if (lit_var := lit.get_variable()) not in self.__variables:
                     self.__variables[lit_var] = None
+                if lit_var in self.__initial_conditions:
+                    lit.set_internal_status(self.__initial_conditions[lit_var])
                 self.__proposition.append(lit)
                 self.__original.append(copy.deepcopy(lit))
         elif isinstance(item, Literal):
             # Literals may be added directly, to proposition and variables
             if (item_var := item.get_variable()) not in self.__variables:
                 self.__variables[item_var] = None
+            if item_var in self.__initial_conditions:
+                item.set_internal_status(self.__initial_conditions[item_var])
             self.__proposition.append(item)
             self.__original.append(copy.deepcopy(item))
         elif isinstance(item, Clause):
             # Clauses may be added directly, but the Literals they contains must be added to the 
-            # variables individually
+            # variables dict individually
             if item.is_empty():
                 return
             for lit in item:
                 if (lit_var := lit.get_variable()) not in self.__variables:
                     self.__variables[lit_var] = None
+                if lit_var in self.__initial_conditions:
+                    lit.set_internal_status(self.__initial_conditions[lit_var])
             self.__proposition.append(item) # add the clause directly to the proposition
             self.__original.append(copy.deepcopy(item))
         else:
@@ -269,6 +276,26 @@ class DPLL(object):
         cp.__variables = copy.deepcopy(self.__variables, memo)
         return cp
     
+    def set_initial_conditions(self, **kwargs: dict[str: bool]) -> dict[str: bool]:
+        """sets the initial conditions for the variables in the proposition"""
+        self.__initial_conditions = kwargs
+        # set variables attribute according to the initial conditions
+        for var in self.__initial_conditions:
+            if var in self.__variables:
+                self.__variables[var] = self.__initial_conditions[var]
+        # set the internal status of Literals according to the initial conditions
+        for cl in self:
+            if isinstance(cl, Literal):
+                if (lit_var := cl.get_variable()) in self.__initial_conditions:
+                    cl.set_internal_status(self.__initial_conditions[lit_var])
+            elif isinstance(cl, Clause):
+                for lit in cl:
+                    if (lit_var := lit.get_variable()) in self.__initial_conditions:
+                        lit.set_internal_status(self.__initial_conditions[lit_var])
+            else:
+                raise TypeError("Only Clause and Literal objects allowed in a proposition.")
+        return kwargs
+    
     def solve_for_variables(self) -> Union[dict, None]:
         """Uses the solver process to set the variable values in the variables attribute.
         
@@ -285,7 +312,8 @@ class DPLL(object):
         { 'c': True, 'a': True, 'b': 'either' }
         """
         
-        res = self.solve()
+        res = self.dpll(variable_tracking=True, guess_made=True if len(self.__initial_conditions) else False)
+        self.__proposition = copy.deepcopy(self.__original)
         if res == 'sat':
             vars = self.__variables.copy()
             for var in vars:
@@ -295,7 +323,7 @@ class DPLL(object):
         else:
             return None
         
-    def solve(self) -> str:
+    def solve_satisfiability(self) -> str:
         """ replaces the resulting proposition with the original proposition after dpll method call
         
         Returns: a string representing if the proposition is satisfiable or not
@@ -321,13 +349,26 @@ class DPLL(object):
         >>> dpll.get_proposition()
         ['+a', '-a']
         """
-        
+        if self.__initial_conditions:
+            raise AttributeError("Initial conditions attribute has values, need to use solve_for_variables()")
         res = self.dpll()
-        self.__proposition = [copy.deepcopy(cl) for cl in self.__original]
+        self.__proposition = copy.deepcopy(self.__original)
+        self.__variables = {var : None for var in self.__variables}
         return res
     
-    def dpll(self) -> str:
+    def dpll(self, variable_tracking=False, guess_made=False) -> str:
         """Implements the DPLL algorithm to find if the proposition is satisfiable or unsatisfiable
+
+        args:
+            variable_tracking (bool): boolean representing if the dpll should be tracking the variable assignments
+            and check them with the original proposition
+                - set to True when the variables are being solved for
+                - set to False when only concern is satisfiability
+            guess_made (bool): boolean representing if the process that resulted in the calling of dpll() was a guess; used in
+            conjunction with variable_tracking to check when validating if current value assignments in the variables attribute
+            still allow 
+                - set to True if the process resulting in this call is a guess, or the first call after setting iniial conditions
+                - set to False if the process resulting in this call is any other 
         
         Returns: a string representing if the proposition is satisfiable or not
                 'sat' if satisfiable
@@ -339,22 +380,27 @@ class DPLL(object):
         >>> c = Literal('c')
         >>> cl = Clause(a, b)
         >>> dpll = DPLL(c, cl)
-        >>> dpll.solve()
+        >>> dpll.dpll()
         'sat'
         # proposition not the same before and after solving:
         >>> dpll.get_proposition()
         []
 
         >> dpll = DPLL(a, a.NOT())
-        >>> dpll.solve()
+        >>> dpll.dpll()
         'unsat'
         # proposition not the same before and after solving:
         >>> dpll.get_proposition()
         ['-a']"""
         
+        if variable_tracking and guess_made:
+            if not self.check_assignments_with_original():
+                return DPLL.UNSAT
+
         self.simplify()
         # Base case: the proposition is True so it contains only True clauses, therefore the 
-        # proposition will eventually be empty if all True clauses are removed
+        # proposition will eventually be empty if all True clauses are removed, but a check for 
+        # all True is also conducted in the search for unsatisfiability
         if self.is_empty():
             # an empty proposition is satisfiable
             return DPLL.SAT
@@ -367,31 +413,29 @@ class DPLL(object):
         if (False in values):
             # if any clause has the external value of False, the proposition is unsatisfiable
             return DPLL.UNSAT
-        elif (None in values):
-            # if any clause has the external value of None, the proposition satisfiability is
-            # still ambiguous
-            pass
-        elif (True in values):
+        elif not (None in values) and (True in values): # if None in values and not False, 
+                                                        # then its satisfiability is still unknown, can pass by
             # None and False already not in values, so only things in the proposition are clauses
             # with the external value of True, ∴ the proposition is satisfiable
             return DPLL.SAT
         
         # apply unit clause heristic until the proposition is either unsat or did not change with
         # most recent call to UCH
-        res = self.unit_clause_heuristic()
+        res = self.unit_clause_heuristic()     
         if res == DPLL.UNSAT:
             return res
         elif res == DPLL.CHANGED:
-            return self.dpll()
+            return self.dpll(variable_tracking)
         
         # apply pure clause heuristic until the proposition did not change with most recent call 
         # to PCH
         res2 = self.pure_clause_heuristic()
         if res2:
-            return self.dpll() 
+            return self.dpll(variable_tracking) 
         
         # apply guess and check:
-        dpll_cp = copy.deepcopy(self)
+        prop_cp = copy.deepcopy(self.__proposition)
+        vars_cp = self.__variables.copy()
         # apply guess on shortest Clause to have best chance at correct guess
         guess_cl = min(self.__proposition, key=len)
         guess = guess_cl[0]
@@ -401,21 +445,20 @@ class DPLL(object):
         # so at least one Clause may be removed from the proposition
         self.__guess(guess_var, True if guess_sign == 'pos' else False)
         self.simplify()
-
         # check the guess:          
-        res3 = self.dpll()
+        res3 = self.dpll(variable_tracking, guess_made=True)
         if res3 == 'sat':
             return res3
         else:
-            self.__proposition = dpll_cp.get_proposition()
-            self.__variables = dpll_cp.get_variables()
+            self.__proposition = prop_cp
+            self.__variables = vars_cp
 
         # First guess was a failure, guess the opposite value:
         self.__guess(guess_var, False if guess_sign == 'pos' else True)
         self.simplify()
 
         # Second guess is either True XOR the resulting failure means the proposition is unsatisfiable
-        return self.dpll()
+        return self.dpll(variable_tracking, guess_made=True)
     
     def __guess(self, var: str, val: bool):
         """Applies a guess on the status of a variable, setting the internal status of every 
@@ -454,6 +497,44 @@ class DPLL(object):
                 raise TypeError("Proposition may only contain Literals and Clauses")
         for item in to_disregard:
             self.__disregard(item)
+    
+    def check_assignments_with_original(self) -> bool:
+        """Checks if the assignments made through unit_clause_hueristic, pur_clause_hueristic, and guessing are 
+        valid options for having a satisfiable original proposition
+        
+        Returns: a boolen representing if the original porposition is satisfiable (True) or not (False) given the current 
+        value assignments held in the variables attribute
+        """
+        checker = copy.deepcopy(self.__original)
+        for item in self.__original:
+            if isinstance(item, Literal):
+                print(item)
+        for item in checker:
+            if isinstance(item, Literal):
+                if (status := self.__variables[item.get_variable()]) is not None:
+                    item.set_internal_status(status)
+                    # print(checker)
+                    # print(item)
+                    # print(item.get_external_status())
+                    if item.get_external_status() == False:
+                        print("unsat in checker pt 1")
+                        return False # if the external status of a unit clause is false, the original proposition is not 
+                                    # satisfiable with the current value assignments in the variables attribute
+                
+            if isinstance(item, Clause):
+                for lit in item:
+                    if (status := self.__variables[lit.get_variable()]) is not None:
+                        lit.set_internal_status(status)
+                    if (lit.get_external_status()) == False:
+                        item.remove(lit)
+                        if not len(item):
+                            print("unsat from checker pt 2") # if all the literals in a clause are removed, the clause is False
+                            return False # and the original proposition is not satisfiable with the current 
+                                            # value assignments in the variables attribute
+        
+        # If no False clauses found in the proposition copy, then the proposition may still be satisfiable
+        return True
+                    
 
     def unit_clause_heuristic(self) -> str:
             '''Sets the value of any unit clauses so their external external status is True.
@@ -472,15 +553,14 @@ class DPLL(object):
             after second UHC call:
             proposition = [['+c', '+d']]
             '''
-
+            print("applying UCH")
             uclauses = {} # Literal variable (str) : Literal sign (str)
             for item in self:
                 # finds all unit clauses and adds their attributes to uclauses, sets the status 
                 # of the Literal, checks there are no sign contradictions among the unit clauses
                 if isinstance(item, Literal):
-                    lit_var = item.get_variable()
                     lit_sign = item.get_sign()
-                    if lit_var in uclauses:
+                    if (lit_var := item.get_variable()) in uclauses:
                         # if the Literal variable is in uclauses, checks the sign is the same as in
                         # this Literal; if not, unsat by contradiction 
                         if lit_sign != uclauses[lit_var]:
@@ -489,18 +569,20 @@ class DPLL(object):
                         uclauses[lit_var] = lit_sign
                         self.__variables[lit_var] = True if lit_sign == 'pos' else False
                     item.set_internal_status(self.__variables[lit_var])
-            self.simplify()
 
             for clause in self:
                 # If the Literal variable is in uclauses, sets the status of the Literal 
                 # according to the variables attribute
                 if isinstance(clause, Clause):
                     for lit in clause:
-                        assert isinstance(lit, Literal), "Non-Literal found within Clause"
                         if (lit_var := lit.get_variable()) in uclauses:
                             lit.set_internal_status(self.__variables[lit_var])
-            self.simplify()
-            return DPLL.CHANGED if len(uclauses) else DPLL.UNCHANGED
+
+            if len(uclauses):
+                self.simplify()
+                return DPLL.CHANGED
+            
+            return DPLL.UNCHANGED
 
     def pure_clause_heuristic(self) -> bool:
         '''Sets the value of any pure clauses so that their external_status attributes are True. 
@@ -513,7 +595,7 @@ class DPLL(object):
         after PHC call:
         proposition = ['+d', ['-d', '+c']]
          '''
-        
+        print("applying PCH")
         changed = False
         # Literal variable (str) : Tuple(Literal sign (str), <---                            
         var_signs_uniformity = {} # ---> bool representing the uniformity of the signs throughout)
@@ -556,7 +638,8 @@ class DPLL(object):
                         self.__variables[lit_var] = True if lit_sign == 'pos' else False
                         lit.set_internal_status(self.__variables[lit_var])
                         changed = True
-        self.simplify()
+        if changed: 
+            self.simplify()
         return changed
 
 

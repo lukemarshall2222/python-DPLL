@@ -138,7 +138,7 @@ def test_clause_remove_status():
     cl = cl.remove(b)
     cl = cl.remove(c)
     cl = cl.remove(d)
-    assert cl.get_status() == True
+    assert cl.get_status() == False
     b.set_internal_status(False)
     c.set_internal_status(False)
     cl.ADD(b)
